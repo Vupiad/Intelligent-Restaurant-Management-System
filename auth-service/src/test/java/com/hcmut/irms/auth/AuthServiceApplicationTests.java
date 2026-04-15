@@ -1,4 +1,4 @@
-package com.hcmut.irms.auth_service;
+package com.hcmut.irms.auth;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
