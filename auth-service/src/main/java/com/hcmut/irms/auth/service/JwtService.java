@@ -21,15 +21,14 @@ public class JwtService {
     }
 
     public String generateToken(String username, String role) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("role", role);
-
         return Jwts.builder()
-                .setClaims(claims)
+                // 1. Add custom claims safely one by one
+                .claim("role", role)
+                // 2. Set standard claims
                 .setSubject(username)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // Valid for 10 hours
-                // The most important part: signing it with the Private RSA Key
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60))
+                // 3. Sign it
                 .signWith(keyPair.getPrivate(), SignatureAlgorithm.RS256)
                 .compact();
     }
