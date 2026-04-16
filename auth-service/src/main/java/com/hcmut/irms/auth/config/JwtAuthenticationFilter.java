@@ -11,7 +11,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.security.SignatureException;
+import io.jsonwebtoken.MalformedJwtException;
 import java.io.IOException;
 import java.util.Collections;
 
@@ -62,12 +64,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // 6. Save the user into the Security Context! They are now officially logged in.
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
+        } catch (ExpiredJwtException e) {
+            sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Token has expired. Please log in again.");
+            return; // Stop the request here
+        } catch (SignatureException | MalformedJwtException e) {
+            sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid token signature. Access denied.");
+            return; // Stop the request here
         } catch (Exception e) {
-            // If the token is invalid, we do nothing. The request will remain unauthenticated
-            // and Spring will automatically block it with a 403 Forbidden.
+            sendErrorResponse(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "An error occurred during authentication.");
+            return;
         }
 
         // 7. Pass the request to the next filter in the chain
         filterChain.doFilter(request, response);
+    }
+    private void sendErrorResponse(HttpServletResponse response, int status, String message) throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json");
+        response.getWriter().write("{\"error\": \"" + message + "\"}");
     }
 }
