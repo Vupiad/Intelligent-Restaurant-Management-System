@@ -2,6 +2,8 @@ package com.hcmut.irms.auth.service;
 
 import com.hcmut.irms.auth.dto.AuthRequest;
 import com.hcmut.irms.auth.dto.RegisterRequest;
+import com.hcmut.irms.auth.exception.InvalidCredentialsException;
+import com.hcmut.irms.auth.exception.UsernameAlreadyTakenException;
 import com.hcmut.irms.auth.model.User;
 import com.hcmut.irms.auth.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,22 +23,19 @@ public class AuthService {
     }
 
     public String login(AuthRequest request) {
-        // 1. Find the user in Supabase
         User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(InvalidCredentialsException::new);
 
-        // 2. Check if the raw password matches the BCrypt hash in the database
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid credentials");
+            throw new InvalidCredentialsException();
         }
 
-        // 3. Generate and return the signed JWT
         return jwtService.generateToken(user.getUsername(), user.getRole().name());
     }
 
     public void register(RegisterRequest request) {
         if (userRepository.findByUsername(request.getUsername()).isPresent()) {
-            throw new RuntimeException("Username is already taken");
+            throw new UsernameAlreadyTakenException();
         }
 
         String hashedPassword = passwordEncoder.encode(request.getPassword());
