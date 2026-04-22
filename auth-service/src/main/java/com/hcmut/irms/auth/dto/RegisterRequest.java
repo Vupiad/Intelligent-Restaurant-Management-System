@@ -1,13 +1,17 @@
 package com.hcmut.irms.auth.dto;
 
 import com.hcmut.irms.auth.model.Role;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 public class RegisterRequest {
+    @NotBlank(message = "Username is required")
     private String username;
+    @NotBlank(message = "Password is required")
     private String password;
-    private Role role; // The enum we created earlier
+    @NotNull(message = "Role is required")
+    private Role role;
 
-    // Getters and Setters
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
 

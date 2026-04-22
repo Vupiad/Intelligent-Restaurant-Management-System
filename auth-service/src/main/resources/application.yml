@@ -15,9 +15,17 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}
+    show-sql: ${SPRING_JPA_SHOW_SQL:false}
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
+auth:
+  jwt:
+    keystore:
+      location: ${JWT_KEYSTORE_LOCATION:classpath:irms-keystore.jks}
+      password: ${JWT_KEYSTORE_PASSWORD}
+      alias: ${JWT_KEY_ALIAS:irms-key}
+      key-password: ${JWT_KEY_PASSWORD:${JWT_KEYSTORE_PASSWORD}}

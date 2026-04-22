@@ -1,6 +1,7 @@
 package com.hcmut.irms.auth.config;
 
 import com.hcmut.irms.auth.service.JwtService;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,9 +12,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.security.SignatureException;
-import io.jsonwebtoken.MalformedJwtException;
+
 import java.io.IOException;
 import java.util.Collections;
 
@@ -27,57 +26,58 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+        if ("/api/auth/login".equals(path)
+                || "/api/auth/.well-known/jwks.json".equals(path)
+                || "/swagger-ui.html".equals(path)) {
+            return true;
+        }
+        return path.startsWith("/v3/api-docs") || path.startsWith("/swagger-ui");
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // 1. Look for the "Authorization" header
         final String authHeader = request.getHeader("Authorization");
 
-        // 2. If it's missing or doesn't start with "Bearer ", ignore it and move on
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // 3. Extract the token (Remove the "Bearer " prefix)
-        final String jwt = authHeader.substring(7);
-
-        try {
-            // 4. If the token is valid AND the user isn't already logged in to this request thread
-            if (jwtService.isTokenValid(jwt) && SecurityContextHolder.getContext().getAuthentication() == null) {
-
-                String username = jwtService.extractUsername(jwt);
-                String role = jwtService.extractRole(jwt);
-
-                // Spring Security Convention: Roles must start with "ROLE_" (e.g., "ROLE_MANAGER")
-                SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role);
-
-                // 5. Create the official Spring Security authentication token
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        username,
-                        null, // We don't put the password here
-                        Collections.singletonList(authority)
-                );
-
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-                // 6. Save the user into the Security Context! They are now officially logged in.
-                SecurityContextHolder.getContext().setAuthentication(authToken);
-            }
-        } catch (ExpiredJwtException e) {
-            sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Token has expired. Please log in again.");
-            return; // Stop the request here
-        } catch (SignatureException | MalformedJwtException e) {
-            sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid token signature. Access denied.");
-            return; // Stop the request here
-        } catch (Exception e) {
-            sendErrorResponse(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "An error occurred during authentication.");
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+            filterChain.doFilter(request, response);
             return;
         }
 
-        // 7. Pass the request to the next filter in the chain
+        String jwt = authHeader.substring(7);
+
+        try {
+            String username = jwtService.extractUsername(jwt);
+            String role = jwtService.extractRole(jwt);
+            if (role == null || role.isBlank()) {
+                sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid token claims.");
+                return;
+            }
+
+            SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role);
+            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                    username,
+                    null,
+                    Collections.singletonList(authority)
+            );
+            authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(authToken);
+        } catch (JwtException | IllegalArgumentException e) {
+            sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired token.");
+            return;
+        }
+
         filterChain.doFilter(request, response);
     }
+
     private void sendErrorResponse(HttpServletResponse response, int status, String message) throws IOException {
         response.setStatus(status);
         response.setContentType("application/json");
