@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: kds-service
+
+  # MongoDB Atlas template
+  # Replace <username>, <password>, and <cluster-url>
+  data:
+    mongodb:
+      uri: mongodb+srv://12345vupham_db_user:WCSxWSpCTKZmgwN8@cluster0.5mthpbm.mongodb.net/?appName=Cluster0
+      database: kds_service
+
+  # CloudAMQP template (RabbitMQ)
+  # Use values from your CloudAMQP instance
+  rabbitmq:
+    host: ${cloudamqp_host}
+    port: 5672
+    username: ${cloudamqp_username}
+    password: ${cloudamqp_password}
+    virtual-host: ${cloudamqp_vhost}
+    ssl:
+      enabled: false
+
+app:
+  rabbitmq:
+    exchange: restaurant.events
+    order-created-queue: kds.order.created
+    order-created-routing-key: order.created
+    order-status-updated-routing-key: order.status.updated
+
+  kds:
+    station-id: KDS-Station-HotLine
