@@ -6,7 +6,7 @@ spring:
   # Replace <username>, <password>, and <cluster-url>
   data:
     mongodb:
-      uri: mongodb+srv://12345vupham_db_user:WCSxWSpCTKZmgwN8@cluster0.5mthpbm.mongodb.net/?appName=Cluster0
+      uri: ${mongo_uri}
       database: kds_service
 
   # CloudAMQP template (RabbitMQ)
@@ -19,6 +19,12 @@ spring:
     virtual-host: ${cloudamqp_vhost}
     ssl:
       enabled: false
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:8081/api/auth/.well-known/jwks.json
 
 app:
   rabbitmq:
