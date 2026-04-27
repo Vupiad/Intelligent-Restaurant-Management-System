@@ -11,12 +11,12 @@ import java.util.List;
 import java.util.Objects;
 
 public class JwtRoleAuthoritiesConverter implements Converter<Jwt, Collection<GrantedAuthority>> {
-    private static final String ROLES_CLAIM = "roles";
+    private static final String ROLE_CLAIM = "role";
     private static final String ROLE_PREFIX = "ROLE_";
 
     @Override
     public Collection<GrantedAuthority> convert(Jwt jwt) {
-        Object claim = jwt.getClaim(ROLES_CLAIM);
+        Object claim = jwt.getClaim(ROLE_CLAIM);
         if (claim == null) {
             return List.of();
         }

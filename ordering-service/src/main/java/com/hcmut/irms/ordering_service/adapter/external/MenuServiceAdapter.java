@@ -34,7 +34,7 @@ public class MenuServiceAdapter implements MenuAvailabilityPort {
                         .retrieve()
                         .body(MenuItemResponse.class);
 
-                if (response == null || !response.isAvailable()) {
+                if (response == null || !response.isAvailableForOrder()) {
                     log.warn("Menu item {} is not available", itemId);
                     unavailable.add(itemId);
                 }

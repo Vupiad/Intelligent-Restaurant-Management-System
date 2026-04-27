@@ -5,14 +5,25 @@ package com.hcmut.irms.ordering_service.dto.external;
  * <p>
  * Jackson maps menu-service's boolean getter {@code isAvailable()} → JSON field "available".
  */
+import java.util.UUID;
+
 public class MenuItemResponse {
+    private UUID itemId;
+    private boolean availableForOrder;
 
-    private String id;
-    private boolean available;   // JSON key: "available" (from isAvailable() getter in menu-service)
+    public UUID getItemId() {
+        return itemId;
+    }
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    public void setItemId(UUID itemId) {
+        this.itemId = itemId;
+    }
 
-    public boolean isAvailable() { return available; }
-    public void setAvailable(boolean available) { this.available = available; }
+    public boolean isAvailableForOrder() {
+        return availableForOrder;
+    }
+
+    public void setAvailableForOrder(boolean availableForOrder) {
+        this.availableForOrder = availableForOrder;
+    }
 }
