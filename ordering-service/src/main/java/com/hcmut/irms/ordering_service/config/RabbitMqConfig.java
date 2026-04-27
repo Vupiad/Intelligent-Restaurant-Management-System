@@ -42,7 +42,7 @@ public class RabbitMqConfig {
     public Binding orderStatusBinding(
             Queue orderStatusQueue,
             TopicExchange restaurantEventsExchange,
-            @Value("${app.rabbitmq.order-status-routing-key:order.status.updated}") String routingKey) {
+            @Value("${app.rabbitmq.order-status-routing-key:orde8r.status.updated}") String routingKey) {
         return BindingBuilder.bind(orderStatusQueue).to(restaurantEventsExchange).with(routingKey);
     }
 
