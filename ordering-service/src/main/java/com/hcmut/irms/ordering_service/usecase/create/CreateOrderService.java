@@ -75,7 +75,8 @@ public class CreateOrderService implements CreateOrderUseCase {
                         i.getMenuItemId(),
                         i.getName(),
                         i.getQuantity(),
-                        i.getCustomizations()))
+                        i.getCustomizations(),
+                        i.getNotes()))
                 .toList();
 
         // tableNumber is String in our domain; KDS expects Integer — parse safely

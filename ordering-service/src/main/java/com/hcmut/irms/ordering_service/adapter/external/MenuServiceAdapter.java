@@ -29,7 +29,7 @@ public class MenuServiceAdapter implements MenuAvailabilityPort {
         for (String itemId : menuItemIds) {
             try {
                 MenuItemResponse response = menuServiceRestClient.get()
-                        .uri("/api/menu/{itemId}", itemId)
+                        .uri("/api/menu/{itemId}/availability", itemId)
                         .header("Authorization", "Bearer " + bearerToken)
                         .retrieve()
                         .body(MenuItemResponse.class);

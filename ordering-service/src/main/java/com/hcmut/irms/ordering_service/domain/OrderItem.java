@@ -38,4 +38,9 @@ public class OrderItem {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb default '[]'::jsonb", nullable = false)
     private List<String> customizations = new ArrayList<>();
+
+    @Builder.Default
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb default '[]'::jsonb", nullable = false)
+    private List<String> notes = new ArrayList<>();
 }
