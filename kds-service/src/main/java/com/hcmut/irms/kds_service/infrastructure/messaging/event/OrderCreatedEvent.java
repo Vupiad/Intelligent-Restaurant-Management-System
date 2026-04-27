@@ -14,7 +14,8 @@ public record OrderCreatedEvent(
             String menuItemId,
             String itemName,
             Integer quantity,
-            List<String> customizations
+            List<String> customizations,
+            List<String> notes
     ) {
     }
 }

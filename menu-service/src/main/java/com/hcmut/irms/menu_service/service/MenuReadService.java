@@ -1,5 +1,6 @@
 package com.hcmut.irms.menu_service.service;
 
+import com.hcmut.irms.menu_service.dto.MenuItemAvailabilityResponseDTO;
 import com.hcmut.irms.menu_service.dto.MenuItemResponseDTO;
 import com.hcmut.irms.menu_service.model.MenuItem;
 import com.hcmut.irms.menu_service.model.Promotion;
@@ -48,6 +49,18 @@ public class MenuReadService implements MenuReadUseCase {
         MenuItem item = itemRepo.findByIdWithPromotions(itemId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Menu item not found: " + itemId));
         return toResponse(item, LocalDateTime.now());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MenuItemAvailabilityResponseDTO getItemAvailability(UUID itemId) {
+        MenuItem item = itemRepo.findById(itemId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Menu item not found: " + itemId));
+
+        MenuItemAvailabilityResponseDTO response = new MenuItemAvailabilityResponseDTO();
+        response.setItemId(item.getId());
+        response.setAvailableForOrder(item.isAvailable());
+        return response;
     }
 
     private MenuItemResponseDTO toResponse(MenuItem item, LocalDateTime now) {

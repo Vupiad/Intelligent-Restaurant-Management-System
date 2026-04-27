@@ -1,5 +1,6 @@
 package com.hcmut.irms.menu_service.controller;
 
+import com.hcmut.irms.menu_service.dto.MenuItemAvailabilityResponseDTO;
 import com.hcmut.irms.menu_service.dto.MenuItemRequestDTO;
 import com.hcmut.irms.menu_service.dto.MenuItemResponseDTO;
 import com.hcmut.irms.menu_service.usecase.MenuReadUseCase;
@@ -42,6 +43,11 @@ public class MenuController {
     @GetMapping("/{itemId}")
     public MenuItemResponseDTO getMenuItem(@PathVariable UUID itemId) {
         return readUseCase.getMenuItemById(itemId);
+    }
+
+    @GetMapping("/{itemId}/availability")
+    public MenuItemAvailabilityResponseDTO getItemAvailability(@PathVariable UUID itemId) {
+        return readUseCase.getItemAvailability(itemId);
     }
 
     @PostMapping

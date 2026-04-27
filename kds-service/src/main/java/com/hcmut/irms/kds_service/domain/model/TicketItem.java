@@ -9,7 +9,7 @@ public class TicketItem {
     private Integer quantity;
     private ItemStatus status;
     private List<String> customizations = new ArrayList<>();
-
+    private List<String> notes = new ArrayList<>();
     public TicketItem() {
     }
 
@@ -59,5 +59,13 @@ public class TicketItem {
 
     public void setCustomizations(List<String> customizations) {
         this.customizations = customizations == null ? new ArrayList<>() : new ArrayList<>(customizations);
+    }
+
+    public List<String> getNotes() {
+        return notes;
+    }
+
+    public void setNotes(List<String> notes) {
+        this.notes = notes;
     }
 }
