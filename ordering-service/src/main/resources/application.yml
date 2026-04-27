@@ -1,0 +1,55 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: ordering-service
+
+  datasource:
+    url: ${SUPABASE_DB_URL}
+    username: ${SUPABASE_DB_USER}
+    password: ${SUPABASE_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        show_sql: true
+
+  # RabbitMQ / CloudAMQP — same env-var pattern as kds-service
+  rabbitmq:
+    host: ${cloudamqp_host}
+    port: 5672
+    username: ${cloudamqp_username}
+    password: ${cloudamqp_password}
+    virtual-host: ${cloudamqp_vhost}
+    ssl:
+      enabled: false
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Downloads the public key from auth-service to verify tokens
+          jwk-set-uri: http://localhost:8081/api/auth/.well-known/jwks.json
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+# Application-level RabbitMQ topology keys
+app:
+  rabbitmq:
+    exchange: restaurant.events
+    # Key we PUBLISH on (KDS consumes via queue kds.order.created)
+    order-created-routing-key: order.created
+    # Queue we CONSUME from (we declare this, KDS publishes to order.status.updated)
+    order-status-queue: ordering.kds.status
+    order-status-routing-key: order.status.updated
+
+  # Menu-service base URL for availability checks
+  menu-service:
+    base-url: http://localhost:8082
