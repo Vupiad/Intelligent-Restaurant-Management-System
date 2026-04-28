@@ -1,22 +1,35 @@
 package com.hcmut.irms.ordering_service.config;
 
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.web.client.RestClient;
 
-/**
- * Configures a {@link RestClient} pre-configured with the menu-service base URL.
- * Used by {@link com.hcmut.irms.ordering_service.adapter.external.MenuServiceAdapter}.
- */
 @Configuration
 public class RestClientConfig {
 
+    // 1. THE NORMAL BUILDER
+    // @Primary tells Eureka: "Use this one by default so you don't crash!"
     @Bean
-    public RestClient menuServiceRestClient(
-            @Value("${app.menu-service.base-url:http://localhost:8082}") String baseUrl) {
-        return RestClient.builder()
-                .baseUrl(baseUrl)
-                .build();
+    @Primary
+    public RestClient.Builder standardRestClientBuilder() {
+        return RestClient.builder();
+    }
+
+    // 2. THE EUREKA-AWARE BUILDER
+    // We give it a specific name so we can call it manually.
+    @Bean(name = "loadBalancedBuilder")
+    @LoadBalanced
+    public RestClient.Builder loadBalancedRestClientBuilder() {
+        return RestClient.builder();
+    }
+
+    // 3. YOUR SPECIFIC MICROSERVICE CLIENTS
+    // We use @Qualifier to specifically grab the Eureka-aware builder
+    @Bean
+    public RestClient menuServiceRestClient(@Qualifier("loadBalancedBuilder") RestClient.Builder builder) {
+        return builder.baseUrl("http://menu-service").build();
     }
 }
