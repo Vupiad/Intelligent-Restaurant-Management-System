@@ -8,4 +8,6 @@ import java.util.List;
 
 public interface KitchenTicketRepository extends MongoRepository<KitchenTicket, String> {
     List<KitchenTicket> findByStatusNot(TicketStatus status);
+
+    List<KitchenTicket> findByStatusNotIn(List<TicketStatus> statuses);
 }

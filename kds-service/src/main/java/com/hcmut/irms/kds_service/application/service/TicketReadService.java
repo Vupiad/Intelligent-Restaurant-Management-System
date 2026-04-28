@@ -18,6 +18,6 @@ public class TicketReadService implements TicketReadUseCase {
 
     @Override
     public List<KitchenTicket> getActiveTickets() {
-        return repository.findByStatusNot(TicketStatus.READY);
+        return repository.findByStatusNotIn(List.of(TicketStatus.READY, TicketStatus.SERVED));
     }
 }

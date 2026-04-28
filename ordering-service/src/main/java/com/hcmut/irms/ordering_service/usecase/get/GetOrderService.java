@@ -25,6 +25,14 @@ public class GetOrderService implements GetOrderUseCase {
         return toResponse(order);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getAllOrders() {
+        return orderRepositoryPort.findAll().stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     private OrderResponse toResponse(Order order) {
         List<OrderItemResponse> itemResponses = order.getItems().stream()
                 .map(i -> new OrderItemResponse(
