@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.EnumSet;
 import java.util.List;
 
 @Service
@@ -44,37 +45,26 @@ public class TicketWriteService implements TicketWriteUseCase {
         webSocketPublisher.broadcastNewTicket(saved);
     }
 
-    @Override
-    public KitchenTicket updateItemStatus(String ticketId, int itemIndex, ItemStatus status) {
-        KitchenTicket ticket = repository.findById(ticketId).orElseThrow(() -> new TicketNotFoundException(ticketId));
-        if (itemIndex < 0 || itemIndex >= ticket.getItems().size()) {
-            throw new IllegalArgumentException("Invalid item index: " + itemIndex);
-        }
-
-        ticket.getItems().get(itemIndex).setStatus(status);
-        boolean becameReady = recalculateTicketStatus(ticket);
-
-        KitchenTicket saved = repository.save(ticket);
-        if (becameReady) {
-            orderStatusPublisher.publishTicketReadyEvent(saved.getId());
-            webSocketPublisher.broadcastTicketRemoval(saved.getId());
-            return saved;
-        }
-        webSocketPublisher.broadcastTicketUpdate(saved);
-        return saved;
-    }
 
     @Override
-    public void markTicketReady(String ticketId) {
-        KitchenTicket ticket = repository.findById(ticketId).orElseThrow(() -> new TicketNotFoundException(ticketId));
-        for (TicketItem item : ticket.getItems()) {
-            item.setStatus(ItemStatus.READY);
+    public void updateOrderStatus(String ticketId, TicketStatus status) {
+        if (status == null) {
+            throw new IllegalArgumentException("Status is required");
         }
-        ticket.setStatus(TicketStatus.READY);
-        ticket.setCompletedAt(LocalDateTime.now(ZoneOffset.UTC));
+        if (!EnumSet.of(TicketStatus.COOKING, TicketStatus.READY, TicketStatus.SERVED).contains(status)) {
+            throw new IllegalArgumentException("Status must be COOKING, READY, or SERVED");
+        }
+
+        KitchenTicket ticket = repository.findById(ticketId).orElseThrow(() -> new TicketNotFoundException(ticketId));
+        ticket.setStatus(status);
+        ticket.setCompletedAt(status == TicketStatus.COOKING ? null : LocalDateTime.now(ZoneOffset.UTC));
 
         KitchenTicket saved = repository.save(ticket);
-        orderStatusPublisher.publishTicketReadyEvent(saved.getId());
+        orderStatusPublisher.publishOrderStatusEvent(saved.getId(), status);
+        if (status == TicketStatus.COOKING) {
+            webSocketPublisher.broadcastTicketUpdate(saved);
+            return;
+        }
         webSocketPublisher.broadcastTicketRemoval(saved.getId());
     }
 

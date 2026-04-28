@@ -11,6 +11,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.util.List;
 
 /**
  * REST entry point for order operations.
@@ -46,6 +47,15 @@ public class OrderController {
     @GetMapping("/{orderId}")
     public ResponseEntity<OrderResponse> getOrder(@PathVariable Long orderId) {
         return ResponseEntity.ok(getOrderUseCase.getOrder(orderId));
+    }
+
+    /**
+     * Get all orders.
+     * Requires role: MANAGER or SERVER
+     */
+    @GetMapping
+    public ResponseEntity<List<OrderResponse>> getAllOrders() {
+        return ResponseEntity.ok(getOrderUseCase.getAllOrders());
     }
 
     // ─── Helper ──────────────────────────────────────────────────────────────

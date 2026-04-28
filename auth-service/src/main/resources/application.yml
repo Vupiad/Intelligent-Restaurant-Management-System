@@ -29,3 +29,9 @@ auth:
       password: ${JWT_KEYSTORE_PASSWORD}
       alias: ${JWT_KEY_ALIAS:irms-key}
       key-password: ${JWT_KEY_PASSWORD:${JWT_KEYSTORE_PASSWORD}}
+
+eureka:
+  client:
+    service-url:
+      # Tell the KDS service where the Eureka server lives
+      defaultZone: http://localhost:8761/eureka/

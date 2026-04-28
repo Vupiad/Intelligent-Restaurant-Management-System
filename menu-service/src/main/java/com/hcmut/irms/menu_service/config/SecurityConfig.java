@@ -1,6 +1,7 @@
 package com.hcmut.irms.menu_service.config;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
@@ -15,6 +16,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.Collection;
 
@@ -60,9 +62,21 @@ public class SecurityConfig {
     }
 
     @Bean
-    JwtDecoder jwtDecoder(@Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}") String jwkSetUri) {
+    @LoadBalanced
+    public RestTemplate loadBalancedRestTemplate() {
+        return new RestTemplate();
+    }
+
+
+    @Bean
+    public JwtDecoder jwtDecoder(
+            RestTemplate loadBalancedRestTemplate,
+            @Value("${app.security.jwk-set-uri}") String jwkSetUri) {
+
+        // We tell Nimbus (the underlying JWT library) to use our Eureka RestTemplate
+        // instead of its default one.
         return NimbusJwtDecoder.withJwkSetUri(jwkSetUri)
-                .jwsAlgorithm(SignatureAlgorithm.RS256)
+                .restOperations(loadBalancedRestTemplate)
                 .build();
     }
 }

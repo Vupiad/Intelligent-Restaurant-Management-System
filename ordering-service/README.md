@@ -135,6 +135,7 @@ Role requirements:
 | Endpoint | Required Role |
 |----------|--------------|
 | `POST /api/orders` | `MANAGER` or `SERVER` |
+| `GET /api/orders` | `MANAGER` or `SERVER` |
 | `GET /api/orders/{id}` | `MANAGER` or `SERVER` |
 
 Include the token in every request:
@@ -244,6 +245,13 @@ At this point, a `KdsOrderCreatedEvent` is published to RabbitMQ → KDS picks i
 
 ```bash
 GET http://localhost:8083/api/orders/1
+Authorization: Bearer <token>
+```
+
+#### 3.1 Get All Orders
+
+```bash
+GET http://localhost:8083/api/orders
 Authorization: Bearer <token>
 ```
 

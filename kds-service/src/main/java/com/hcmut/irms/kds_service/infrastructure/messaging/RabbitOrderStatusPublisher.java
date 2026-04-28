@@ -1,6 +1,7 @@
 package com.hcmut.irms.kds_service.infrastructure.messaging;
 
 import com.hcmut.irms.kds_service.application.port.out.OrderStatusPublisher;
+import com.hcmut.irms.kds_service.domain.model.TicketStatus;
 import com.hcmut.irms.kds_service.infrastructure.messaging.event.TicketReadyEvent;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,11 +30,11 @@ public class RabbitOrderStatusPublisher implements OrderStatusPublisher {
     }
 
     @Override
-    public void publishTicketReadyEvent(String orderId) {
+    public void publishOrderStatusEvent(String orderId, TicketStatus status) {
         TicketReadyEvent event = new TicketReadyEvent(
                 UUID.randomUUID().toString(),
                 orderId,
-                "READY",
+                status.name(),
                 OffsetDateTime.now(ZoneOffset.UTC).toString(),
                 updatedBy
         );
