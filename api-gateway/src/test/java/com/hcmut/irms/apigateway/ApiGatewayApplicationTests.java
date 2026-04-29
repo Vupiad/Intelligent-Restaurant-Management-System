@@ -1,4 +1,4 @@
-package com.hcmut.irms.api_gateway;
+package com.hcmut.irms.apigateway;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
