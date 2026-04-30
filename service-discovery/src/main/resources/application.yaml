@@ -2,11 +2,11 @@ spring:
   application:
     name: service-discovery
 server:
-  port: 8761 # 8761 is the global standard port for Eureka
+  port: ${PORT:8080}
 
 eureka:
   instance:
-    hostname: localhost
+    hostname: ${EUREKA_HOSTNAME:localhost}
   client:
-    register-with-eureka: false # I am the server, don't register me
-    fetch-registry: false       # I am the server, don't fetch from anywhere else
+    register-with-eureka: false
+    fetch-registry: false
