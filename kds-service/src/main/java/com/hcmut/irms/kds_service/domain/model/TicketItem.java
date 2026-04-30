@@ -13,12 +13,13 @@ public class TicketItem {
     public TicketItem() {
     }
 
-    public TicketItem(String menuItemId, String itemName, Integer quantity, ItemStatus status, List<String> customizations) {
+    public TicketItem(String menuItemId, String itemName, Integer quantity, ItemStatus status, List<String> customizations, List<String> notes) {
         this.menuItemId = menuItemId;
         this.itemName = itemName;
         this.quantity = quantity;
         this.status = status;
         this.customizations = customizations == null ? new ArrayList<>() : new ArrayList<>(customizations);
+        this.notes = notes == null ? new ArrayList<>() : new ArrayList<>(notes);
     }
 
     public String getMenuItemId() {
