@@ -1,24 +1,26 @@
 package com.hcmut.irms.kds_service.infrastructure.config;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.client.RestOperations;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
 import java.util.Collection;
+import java.util.Set;
 
 @Configuration
 public class SecurityConfig {
@@ -41,7 +43,10 @@ public class SecurityConfig {
                                 "/v3/api-docs.yaml",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/ws/**"
+                                "/ws/**",
+                                "/actuator/health",
+                                "/actuator/health/**",
+                                "/actuator/info"
                         ).permitAll()
                         .requestMatchers("/api/kds/**")
                         .hasAnyRole("MANAGER", "CHEF")
@@ -61,20 +66,33 @@ public class SecurityConfig {
 
     @Bean
     @LoadBalanced
-    public RestTemplate loadBalancedRestTemplate() {
+    public RestTemplate discoveryRestTemplate() {
+        return new RestTemplate();
+    }
+
+    @Bean
+    public RestTemplate plainRestTemplate() {
         return new RestTemplate();
     }
 
 
     @Bean
     public JwtDecoder jwtDecoder(
-            RestTemplate loadBalancedRestTemplate,
+            @Qualifier("discoveryRestTemplate") RestTemplate discoveryRestTemplate,
+            @Qualifier("plainRestTemplate") RestTemplate plainRestTemplate,
             @Value("${app.security.jwk-set-uri}") String jwkSetUri) {
 
-        // We tell Nimbus (the underlying JWT library) to use our Eureka RestTemplate
-        // instead of its default one.
+        RestOperations restOperations = usesDirectHost(jwkSetUri)
+                ? plainRestTemplate
+                : discoveryRestTemplate;
+
         return NimbusJwtDecoder.withJwkSetUri(jwkSetUri)
-                .restOperations(loadBalancedRestTemplate)
+                .restOperations(restOperations)
                 .build();
+    }
+
+    private boolean usesDirectHost(String jwkSetUri) {
+        String host = URI.create(jwkSetUri).getHost();
+        return host != null && Set.of("localhost", "127.0.0.1").contains(host);
     }
 }
