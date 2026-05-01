@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/categories")
+@RequestMapping("/api/menu/categories")
 public class CategoryController {
     private final CategoryReadUseCase readUseCase;
     private final CategoryWriteUseCase writeUseCase;

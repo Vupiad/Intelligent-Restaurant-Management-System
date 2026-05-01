@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/promotions")
+@RequestMapping("/api/menu/promotions")
 public class PromotionController {
     private final PromotionReadUseCase readUseCase;
     private final PromotionWriteUseCase writeUseCase;

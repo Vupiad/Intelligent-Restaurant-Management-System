@@ -8,7 +8,5 @@ import com.hcmut.irms.kds_service.infrastructure.messaging.event.OrderCreatedEve
 public interface TicketWriteUseCase {
     void createTicketFromEvent(OrderCreatedEvent event);
 
-    KitchenTicket updateItemStatus(String ticketId, int itemIndex, ItemStatus status);
-
     void updateOrderStatus(String ticketId, TicketStatus status);
 }

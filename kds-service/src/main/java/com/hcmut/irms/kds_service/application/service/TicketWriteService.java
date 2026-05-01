@@ -104,17 +104,7 @@ public class TicketWriteService implements TicketWriteUseCase {
             return List.of();
         }
         return items.stream()
-                .map(i -> {
-                    TicketItem ticketItem = new TicketItem(
-                            i.menuItemId(),
-                            i.itemName(),
-                            i.quantity(),
-                            ItemStatus.PENDING,
-                            i.customizations()
-                    );
-                    ticketItem.setNotes(i.notes());
-                    return ticketItem;
-                })
+                .map(i -> new TicketItem(i.menuItemId(), i.itemName(), i.quantity(), ItemStatus.PENDING, i.customizations(), i.notes()))
                 .toList();
     }
 
