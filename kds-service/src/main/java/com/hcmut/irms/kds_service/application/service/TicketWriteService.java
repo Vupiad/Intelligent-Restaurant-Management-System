@@ -47,6 +47,37 @@ public class TicketWriteService implements TicketWriteUseCase {
 
 
     @Override
+    public KitchenTicket updateItemStatus(String ticketId, int itemIndex, ItemStatus status) {
+        if (status == null) {
+            throw new IllegalArgumentException("Item status is required");
+        }
+
+        KitchenTicket ticket = repository.findById(ticketId).orElseThrow(() -> new TicketNotFoundException(ticketId));
+        List<TicketItem> items = ticket.getItems();
+        if (itemIndex < 0 || itemIndex >= items.size()) {
+            throw new IllegalArgumentException("Invalid item index: " + itemIndex);
+        }
+
+        items.get(itemIndex).setStatus(status);
+
+        TicketStatus previousStatus = ticket.getStatus();
+        boolean ticketCompleted = recalculateTicketStatus(ticket);
+        KitchenTicket saved = repository.save(ticket);
+
+        if (saved.getStatus() != previousStatus) {
+            orderStatusPublisher.publishOrderStatusEvent(saved.getId(), saved.getStatus());
+        }
+
+        if (ticketCompleted) {
+            webSocketPublisher.broadcastTicketRemoval(saved.getId());
+            return saved;
+        }
+
+        webSocketPublisher.broadcastTicketUpdate(saved);
+        return saved;
+    }
+
+    @Override
     public void updateOrderStatus(String ticketId, TicketStatus status) {
         if (status == null) {
             throw new IllegalArgumentException("Status is required");
