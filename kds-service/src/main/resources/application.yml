@@ -6,10 +6,9 @@ spring:
 
   # MongoDB Atlas template
   # Replace <username>, <password>, and <cluster-url>
-  data:
-    mongodb:
-      uri: ${mongo_uri}
-      database: kds_service
+  mongodb:
+    uri: ${mongo_uri:mongodb://localhost:27017}
+    database: kds_service
 
   # CloudAMQP template (RabbitMQ)
   # Use values from your CloudAMQP instance
