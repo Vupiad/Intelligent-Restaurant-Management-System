@@ -9,7 +9,7 @@ import java.util.List;
  * {@code eventId, orderId, tableNumber (Integer), waiterId, timestamp (ISO-8601 string),
  * items[{menuItemId, itemName, quantity, customizations}]}
  */
-public record KdsOrderCreatedEvent(
+public record OrderCreatedEvent(
         String eventId,
         String orderId,
         Integer tableNumber,

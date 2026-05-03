@@ -1,6 +1,6 @@
 package com.hcmut.irms.ordering_service.adapter.messaging;
 
-import com.hcmut.irms.ordering_service.dto.event.KdsOrderCreatedEvent;
+import com.hcmut.irms.ordering_service.dto.event.OrderCreatedEvent;
 import com.hcmut.irms.ordering_service.port.OrderEventPublisherPort;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -25,7 +25,7 @@ public class RabbitMQOrderEventPublisher implements OrderEventPublisherPort {
     }
 
     @Override
-    public void publishOrderCreated(KdsOrderCreatedEvent event) {
+    public void publishOrderCreated(OrderCreatedEvent event) {
         log.info("Publishing order-created event for orderId={} to exchange={} routingKey={}",
                 event.orderId(), exchange, orderCreatedRoutingKey);
         rabbitTemplate.convertAndSend(exchange, orderCreatedRoutingKey, event);

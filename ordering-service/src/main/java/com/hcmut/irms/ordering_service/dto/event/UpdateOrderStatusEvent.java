@@ -6,7 +6,7 @@ package com.hcmut.irms.ordering_service.dto.event;
  * Field names MUST match exactly what kds-service's {@code TicketReadyEvent} publishes:
  * {@code eventId, orderId, newStatus, timestamp, updatedBy}
  */
-public record KdsStatusEvent(
+public record UpdateOrderStatusEvent(
         String eventId,
         String orderId,
         String newStatus,
