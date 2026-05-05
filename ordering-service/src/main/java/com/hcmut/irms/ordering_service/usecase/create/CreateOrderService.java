@@ -51,7 +51,8 @@ public class CreateOrderService implements CreateOrderUseCase {
         Order saved = orderRepositoryPort.save(order);
 
         OrderCreatedEvent event = buildOrderCreatedEvent(saved);
-        outboxEventRepositoryPort.save(buildOutboxEvent(event));
+
+        orderEventPublisherPort.publishOrderCreated(event);
 
 
         return toResponse(saved);

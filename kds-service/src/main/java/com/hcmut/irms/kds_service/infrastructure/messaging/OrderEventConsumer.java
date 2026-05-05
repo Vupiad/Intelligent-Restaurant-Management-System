@@ -1,6 +1,7 @@
 package com.hcmut.irms.kds_service.infrastructure.messaging;
 
 import com.hcmut.irms.kds_service.application.port.in.TicketWriteUseCase;
+import com.hcmut.irms.kds_service.infrastructure.messaging.event.MenuConfirmEvent;
 import com.hcmut.irms.kds_service.infrastructure.messaging.event.OrderCreatedEvent;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
@@ -16,5 +17,10 @@ public class OrderEventConsumer {
     @RabbitListener(queues = "${app.rabbitmq.order-created-queue:kds.order.created}")
     public void consumeOrderCreatedEvent(OrderCreatedEvent event) {
         writeUseCase.createTicketFromEvent(event);
+    }
+
+    @RabbitListener(queues = "${app.rabbitmq.menu-confirm-queue:kds.menu.confirmed}")
+    public void consumeMenuConfirmEvent(MenuConfirmEvent event) {
+        writeUseCase.confirmMenuAvailability(event.orderId(), event.isAvailable());
     }
 }

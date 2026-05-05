@@ -49,6 +49,9 @@ app:
     # Queue we CONSUME from (we declare this, KDS publishes to order.status.updated)
     order-status-queue: ordering.kds.status
     order-status-routing-key: order.status.updated
+    # Queue we CONSUME from for menu availability confirmations
+    menu-confirm-queue: ordering.menu.confirm
+    menu-confirm-routing-key: menu.confirmed
   security:
     # Notice we use the Eureka name "auth-service" instead of localhost:8081!
     jwk-set-uri: http://auth-service/api/auth/.well-known/jwks.json

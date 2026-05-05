@@ -68,6 +68,8 @@ cloudamqp_vhost=<vhost>
 | `app.rabbitmq.order-created-routing-key` | `order.created` | Key for publishing to KDS |
 | `app.rabbitmq.order-status-queue` | `ordering.kds.status` | Queue we consume KDS replies on |
 | `app.rabbitmq.order-status-routing-key` | `order.status.updated` | Routing key KDS publishes on |
+| `app.rabbitmq.menu-confirm-queue` | `ordering.menu.confirm` | Queue we consume menu confirmations on |
+| `app.rabbitmq.menu-confirm-routing-key` | `menu.confirmed` | Routing key menu-service publishes on |
 | `app.menu-service.base-url` | `http://localhost:8082` | Menu-service base URL |
 | `spring.security.oauth2.resourceserver.jwt.jwk-set-uri` | `http://localhost:8081/api/auth/.well-known/jwks.json` | JWKS endpoint |
 
@@ -79,7 +81,15 @@ cloudamqp_vhost=<vhost>
 ordering-service  ──[order.created]──►  restaurant.events  ──►  kds.order.created  ──►  kds-service
 ordering-service  ◄─[order.status.updated]──  restaurant.events  ◄──  kds-service
                                     ordering.kds.status (our queue)
+ordering-service  ◄─[menu.confirmed]──  restaurant.events  ◄──  menu-service
+                              ordering.menu.confirm (our queue)
 ```
+
+### WebSocket realtime updates
+
+- STOMP endpoint: `/ws`
+- Topic (all order status updates): `/topic/orders/status`
+- Topic (single order): `/topic/orders/{orderId}/status`
 
 ### `KdsOrderCreatedEvent` (published by ordering → consumed by KDS)
 

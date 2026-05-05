@@ -26,6 +26,11 @@ app:
   security:
     # Notice we use the Eureka name "auth-service" instead of localhost:8081!
     jwk-set-uri: http://auth-service/api/auth/.well-known/jwks.json
+  rabbitmq:
+    exchange: restaurant.events
+    order-created-queue: kds.order.created
+    order-created-routing-key: order.created
+    menu-confirm-routing-key: menu.confirmed
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

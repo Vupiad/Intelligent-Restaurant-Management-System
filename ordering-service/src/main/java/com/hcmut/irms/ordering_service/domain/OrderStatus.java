@@ -3,6 +3,8 @@ package com.hcmut.irms.ordering_service.domain;
 public enum OrderStatus {
     PENDING,
     CONFIRM,
+    REJECT,
+    KITCHEN_PENDING,
     COOKING,
     READY,
     SERVED;
