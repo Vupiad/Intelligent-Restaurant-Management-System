@@ -1,97 +1,95 @@
 # Ordering Service
 
-> Part of the **Intelligent Restaurant Management System (IRMS)** microservices platform.
+Part of the **Intelligent Restaurant Management System (IRMS)** microservices platform.
 
-The ordering-service is the central hub for guest orders. It receives orders from front-of-house staff, checks menu availability, persists orders in PostgreSQL, and broadcasts them to the Kitchen Display System (KDS) via RabbitMQ. It also listens for KDS status updates and applies them back to the order.
-
----
+`ordering-service` receives guest orders, validates menu availability through `menu-service`, stores orders in PostgreSQL, publishes `order.created` events to RabbitMQ, and consumes KDS status updates to keep order state in sync.
 
 ## Architecture
 
-```
+```text
 com.hcmut.irms.ordering_service
-├── controller/            REST API (no business logic)
+├── controller/            REST API
 ├── adapter/
-│   ├── persistence/       Spring Data JPA (OrderRepositoryAdapter)
+│   ├── external/          menu-service client
 │   ├── messaging/         RabbitMQ publisher + listener
-│   └── external/          Menu-service REST client
+│   └── persistence/       Spring Data JPA adapter
 ├── usecase/
-│   ├── create/            CreateOrderUseCase + CreateOrderService
-│   ├── get/               GetOrderUseCase + GetOrderService
-│   └── update/            UpdateOrderStatusUseCase + UpdateOrderStatusService
-├── domain/                Order, OrderItem, OrderStatus (enum), exceptions
-├── port/                  OrderRepositoryPort, MenuAvailabilityPort, OrderEventPublisherPort
-├── dto/
-│   ├── api/               CreateOrderRequest, OrderResponse (REST layer)
-│   ├── event/             KdsOrderCreatedEvent, KdsStatusEvent (RabbitMQ)
-│   └── external/          MenuItemResponse (menu-service response)
-└── config/                Security, RabbitMQ, RestClient configs
+│   ├── create/            create order flow
+│   ├── get/               read order flow
+│   └── update/            apply KDS status updates
+├── domain/                Order, OrderItem, OrderStatus, exceptions
+├── port/                  repository, event, and availability ports
+├── dto/                   API, event, and external DTOs
+└── config/                security, RabbitMQ, and RestClient setup
 ```
 
-### Dependency Direction
+Dependency direction:
 
-```
-Controller → UseCase → Domain
-                ↓
-             Ports
-                ↓
-           Adapters
+```text
+Controller -> UseCase -> Domain
+                     -> Ports -> Adapters
 ```
 
----
+## Runtime Dependencies
+
+- PostgreSQL for `orders` and `order_items`
+- RabbitMQ / CloudAMQP for `restaurant.events`
+- `service-discovery` for service-name resolution
+- `auth-service` for JWKS lookup
+- `menu-service` for item availability checks
+
+Important runtime note:
+
+- The service does **not** call `auth-service` or `menu-service` via localhost URLs.
+- JWT verification uses `http://auth-service/api/auth/.well-known/jwks.json`.
+- Menu availability checks use a load-balanced `RestClient` with base URL `http://menu-service`.
+- Because of that, local runs depend on Eureka registration unless you change code or configuration.
 
 ## Configuration
 
-### Environment Variables (`.env`)
-
-Copy and fill in your values:
+### Environment Variables
 
 ```env
-# PostgreSQL / Supabase
-SUPABASE_DB_URL=jdbc:postgresql://<host>:6543/postgres?
-SUPABASE_DB_USER=postgres.<project-ref>
-SUPABASE_DB_PASSWORD=<your-password>
+# PostgreSQL
+SUPABASE_DB_URL=jdbc:postgresql://<host>:6543/postgres
+SUPABASE_DB_USER=<username>
+SUPABASE_DB_PASSWORD=<password>
 
-# CloudAMQP (same credentials as kds-service)
-cloudamqp_host=<your>.cloudamqp.com
+# RabbitMQ / CloudAMQP
+cloudamqp_host=<host>
 cloudamqp_username=<username>
 cloudamqp_password=<password>
 cloudamqp_vhost=<vhost>
+
+# Optional Eureka overrides
+EUREKA_DEFAULT_ZONE=http://localhost:8761/eureka/
+EUREKA_INSTANCE_HOSTNAME=localhost
 ```
 
-### Key `application.yml` properties
+### Key `application.yml` Properties
 
-| Key | Default | Description |
-|-----|---------|-------------|
-| `server.port` | `8083` | Service port |
-| `app.rabbitmq.exchange` | `restaurant.events` | Shared RabbitMQ exchange |
-| `app.rabbitmq.order-created-routing-key` | `order.created` | Key for publishing to KDS |
-| `app.rabbitmq.order-status-queue` | `ordering.kds.status` | Queue we consume KDS replies on |
-| `app.rabbitmq.order-status-routing-key` | `order.status.updated` | Routing key KDS publishes on |
-| `app.rabbitmq.menu-confirm-queue` | `ordering.menu.confirm` | Queue we consume menu confirmations on |
-| `app.rabbitmq.menu-confirm-routing-key` | `menu.confirmed` | Routing key menu-service publishes on |
-| `app.menu-service.base-url` | `http://localhost:8082` | Menu-service base URL |
-| `spring.security.oauth2.resourceserver.jwt.jwk-set-uri` | `http://localhost:8081/api/auth/.well-known/jwks.json` | JWKS endpoint |
+| Key | Current value/default | Notes |
+| --- | --- | --- |
+| `server.port` | `8085` | Local HTTP port |
+| `app.rabbitmq.exchange` | `restaurant.events` | Shared exchange |
+| `app.rabbitmq.order-created-routing-key` | `order.created` | Published after order creation |
+| `app.rabbitmq.order-status-queue` | `ordering.kds.status` | Queue consumed by ordering-service |
+| `app.rabbitmq.order-status-routing-key` | `order.status.updated` | Routing key published by KDS |
+| `app.security.jwk-set-uri` | `http://auth-service/api/auth/.well-known/jwks.json` | JWT verification source |
+| `eureka.client.service-url.defaultZone` | `${EUREKA_DEFAULT_ZONE:http://localhost:8761/eureka/}` | Eureka endpoint |
 
----
+Current source does **not** expose a configurable `app.menu-service.base-url`.
+The outbound menu client is created in `RestClientConfig` with hardcoded base URL `http://menu-service`.
 
 ## RabbitMQ Event Flow
 
-```
-ordering-service  ──[order.created]──►  restaurant.events  ──►  kds.order.created  ──►  kds-service
-ordering-service  ◄─[order.status.updated]──  restaurant.events  ◄──  kds-service
-                                    ordering.kds.status (our queue)
-ordering-service  ◄─[menu.confirmed]──  restaurant.events  ◄──  menu-service
-                              ordering.menu.confirm (our queue)
+```text
+ordering-service --[order.created]--------> restaurant.events ----> kds.order.created ----> kds-service
+ordering-service <--[order.status.updated]- restaurant.events <---- kds-service
+                                          ordering.kds.status
 ```
 
-### WebSocket realtime updates
-
-- STOMP endpoint: `/ws`
-- Topic (all order status updates): `/topic/orders/status`
-- Topic (single order): `/topic/orders/{orderId}/status`
-
-### `KdsOrderCreatedEvent` (published by ordering → consumed by KDS)
+### Published event: `KdsOrderCreatedEvent`
 
 ```json
 {
@@ -111,7 +109,7 @@ ordering-service  ◄─[menu.confirmed]──  restaurant.events  ◄──  me
 }
 ```
 
-### `KdsStatusEvent` (published by KDS → consumed by ordering)
+### Consumed event: `KdsStatusEvent`
 
 ```json
 {
@@ -123,193 +121,95 @@ ordering-service  ◄─[menu.confirmed]──  restaurant.events  ◄──  me
 }
 ```
 
----
-
-## Order Status Flow
-
-```
-CREATED  →  COOKING  →  READY  →  SERVED
-   └──────────────────►┘
-   (KDS sends READY directly; COOKING → READY also valid)
-```
-
-Invalid transitions throw `InvalidStatusTransitionException` (HTTP 409).
-
----
-
 ## Security
 
-All endpoints require a valid JWT (issued by `auth-service`, verified via JWKS).  
-Role requirements:
+The service is a JWT resource server. Swagger endpoints are public; order endpoints require a valid token from `auth-service`.
 
-| Endpoint | Required Role |
-|----------|--------------|
+| Endpoint | Required role |
+| --- | --- |
 | `POST /api/orders` | `MANAGER` or `SERVER` |
 | `GET /api/orders` | `MANAGER` or `SERVER` |
 | `GET /api/orders/{id}` | `MANAGER` or `SERVER` |
 
-Include the token in every request:
-```
-Authorization: Bearer <your-jwt-token>
-```
+Send the token as:
 
----
+```text
+Authorization: Bearer <jwt>
+```
 
 ## Running Locally
 
 ### Prerequisites
 
 - Java 21
-- Maven (or use the included `mvnw.cmd`)
-- PostgreSQL/Supabase credentials in `.env`
-- RabbitMQ/CloudAMQP credentials in `.env`
-- `auth-service` running on port 8081
-- `menu-service` running on port 8082 (for availability checks)
+- RabbitMQ / CloudAMQP credentials
+- PostgreSQL credentials
+- `service-discovery` reachable at the URL used by `EUREKA_DEFAULT_ZONE`
+- `auth-service` registered in Eureka as `auth-service`
+- `menu-service` registered in Eureka as `menu-service`
 
-### Start
+### Recommended startup order
+
+1. Start `service-discovery`
+2. Start `auth-service`
+3. Start `menu-service`
+4. Start `ordering-service`
+
+By default, clients expect Eureka at `http://localhost:8761/eureka/`.
+If your `service-discovery` process is running on `8080`, override `EUREKA_DEFAULT_ZONE` accordingly before starting this service.
+
+### Start command
 
 ```bash
 cd ordering-service
-.\mvnw.cmd spring-boot:run
+./mvnw spring-boot:run
 ```
 
-Service starts on **http://localhost:8083**
+On Windows, use `mvnw.cmd` instead of `./mvnw`.
 
----
+The service starts on `http://localhost:8085`.
 
-## API Reference & Testing
+## API Reference
 
-### Swagger UI
+- Swagger UI: `http://localhost:8085/swagger-ui.html`
+- Create order: `POST /api/orders`
+- Get one order: `GET /api/orders/{orderId}`
+- Get all orders: `GET /api/orders`
 
-```
-http://localhost:8083/swagger-ui.html
-```
+Example create request:
 
-### Step-by-Step Test Flow
-
-#### 1. Get a JWT token
-
-Call auth-service to log in as a `MANAGER` or `SERVER`:
-
-```bash
-POST http://localhost:8081/api/auth/login
-Content-Type: application/json
-
-{
-  "username": "your-username",
-  "password": "your-password"
-}
-```
-
-Save the returned `token` value.
-
----
-
-#### 2. Create an Order
-
-```bash
-POST http://localhost:8083/api/orders
-Authorization: Bearer <token>
-Content-Type: application/json
-
+```json
 {
   "tableNumber": "5",
   "staffName": "John Doe",
   "items": [
     {
-      "menuItemId": "<uuid-from-menu-service>",
+      "menuItemId": "2eaed93b-cd7b-40b7-a3ef-cd6b2fdb2781",
       "name": "Burger",
       "quantity": 2,
-      "customizations": ["no onions", "extra cheese"]
+      "customizations": ["No onions", "Extra cheese"]
     }
   ]
 }
 ```
 
-Expected response `201 Created`:
+## Error Behavior
 
-```json
-{
-  "id": 1,
-  "tableNumber": "5",
-  "staffName": "John Doe",
-  "status": "CREATED",
-  "timestamp": "2024-01-01T10:00:00",
-  "items": [
-    {
-      "id": 1,
-      "menuItemId": "<uuid>",
-      "name": "Burger",
-      "quantity": 2,
-      "customizations": ["no onions", "extra cheese"]
-    }
-  ]
-}
-```
-
-At this point, a `KdsOrderCreatedEvent` is published to RabbitMQ → KDS picks it up.
-
----
-
-#### 3. Get an Order
-
-```bash
-GET http://localhost:8083/api/orders/1
-Authorization: Bearer <token>
-```
-
-#### 3.1 Get All Orders
-
-```bash
-GET http://localhost:8083/api/orders
-Authorization: Bearer <token>
-```
-
----
-
-#### 4. Verify RabbitMQ Event (KDS side)
-
-Check CloudAMQP management UI or KDS logs to confirm the `kds.order.created` queue received the message.
-
----
-
-#### 5. Simulate KDS Status Update
-
-When KDS marks a ticket ready, it publishes to `order.status.updated`. The ordering-service listener picks this up automatically and updates the order status to `READY` in PostgreSQL.
-
-To test manually, publish this message to the `ordering.kds.status` queue (or to exchange `restaurant.events` with routing key `order.status.updated`):
-
-```json
-{
-  "eventId": "test-uuid",
-  "orderId": "1",
-  "newStatus": "READY",
-  "timestamp": "2024-01-01T10:15:00Z",
-  "updatedBy": "KDS-Station-HotLine"
-}
-```
-
-Then call `GET /api/orders/1` to confirm the status changed to `READY`.
-
----
-
-## Error Responses
-
-| HTTP | Scenario |
-|------|----------|
-| `400` | Invalid request (bad enum value, missing fields) |
+| HTTP | Typical scenario |
+| --- | --- |
+| `400` | Invalid enum or other `IllegalArgumentException` |
 | `401` | Missing or invalid JWT |
-| `403` | Authenticated but wrong role |
+| `403` | Valid JWT but wrong role |
 | `404` | Order not found |
 | `409` | Invalid status transition |
-| `422` | One or more menu items are unavailable |
+| `422` | One or more menu items unavailable |
 
----
+Request DTOs currently do not use Bean Validation, so incomplete payloads are not guaranteed to fail with a clean `400`.
 
 ## Build
 
 ```bash
-.\mvnw.cmd clean package -DskipTests
+./mvnw clean package -DskipTests
 ```
 
-The fat JAR is produced at `target/ordering-service-0.0.1-SNAPSHOT.jar`.
+The fat JAR is produced under `target/`.
