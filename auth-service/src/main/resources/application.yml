@@ -31,16 +31,16 @@ auth:
       key-password: ${JWT_KEY_PASSWORD:${JWT_KEYSTORE_PASSWORD}}
 
 eureka:
-  instance:
-    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
-    prefer-ip-address: false
-    instance-id: ${spring.application.name}:${EUREKA_INSTANCE_HOSTNAME:${HOSTNAME:localhost}}
-    non-secure-port-enabled: ${EUREKA_NON_SECURE_PORT_ENABLED:true}
-    secure-port-enabled: ${EUREKA_SECURE_PORT_ENABLED:false}
-    secure-port: ${EUREKA_SECURE_PORT:443}
-    home-page-url: ${EUREKA_HOME_PAGE_URL:http://${eureka.instance.hostname}:${server.port}/}
-    status-page-url: ${EUREKA_STATUS_PAGE_URL:${eureka.instance.home-page-url}}
-    health-check-url: ${EUREKA_HEALTH_CHECK_URL:${eureka.instance.home-page-url}}
+#  instance:
+#    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
+#    prefer-ip-address: false
+#    instance-id: ${spring.application.name}:${EUREKA_INSTANCE_HOSTNAME:${HOSTNAME:localhost}}
+#    non-secure-port-enabled: ${EUREKA_NON_SECURE_PORT_ENABLED:true}
+#    secure-port-enabled: ${EUREKA_SECURE_PORT_ENABLED:false}
+#    secure-port: ${EUREKA_SECURE_PORT:443}
+#    home-page-url: ${EUREKA_HOME_PAGE_URL:http://${eureka.instance.hostname}:${server.port}/}
+#    status-page-url: ${EUREKA_STATUS_PAGE_URL:${eureka.instance.home-page-url}}
+#    health-check-url: ${EUREKA_HEALTH_CHECK_URL:${eureka.instance.home-page-url}}
   client:
     service-url:
       # Tell the KDS service where the Eureka server lives
