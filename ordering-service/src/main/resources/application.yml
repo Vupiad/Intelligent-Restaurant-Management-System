@@ -56,8 +56,6 @@ app:
     # Notice we use the Eureka name "auth-service" instead of localhost:8081!
     jwk-set-uri: http://auth-service/api/auth/.well-known/jwks.json
   # Menu-service base URL for availability checks
-  menu-service:
-    base-url: http://localhost:8082
 
 eureka:
   client:
