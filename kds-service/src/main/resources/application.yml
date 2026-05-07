@@ -32,6 +32,8 @@ app:
     exchange: restaurant.events
     order-created-queue: kds.order.created
     order-created-routing-key: order.created
+    menu-confirm-queue: kds.menu.confirm
+    menu-confirm-routing-key: menu.confirmed
     order-status-updated-routing-key: order.status.updated
 
   kds:

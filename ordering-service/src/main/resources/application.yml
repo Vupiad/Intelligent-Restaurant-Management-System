@@ -6,9 +6,9 @@ spring:
     name: ordering-service
 
   datasource:
-    url: ${SUPABASE_DB_URL}
-    username: ${SUPABASE_DB_USER}
-    password: ${SUPABASE_DB_PASSWORD}
+    url: ${ORDER_SUPABASE_URL}
+    username: ${ORDER_SUPABASE_USER}
+    password: ${ORDER_SUPABASE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -49,11 +49,12 @@ app:
     # Queue we CONSUME from (we declare this, KDS publishes to order.status.updated)
     order-status-queue: ordering.kds.status
     order-status-routing-key: order.status.updated
+    # Queue we CONSUME from for menu availability confirmations
+    menu-confirm-queue: order.menu.confirm
+    menu-confirm-routing-key: menu.confirmed
   security:
     # Notice we use the Eureka name "auth-service" instead of localhost:8081!
     jwk-set-uri: http://auth-service/api/auth/.well-known/jwks.json
-  # Menu-service base URL for availability checks
-
 
 eureka:
   instance:

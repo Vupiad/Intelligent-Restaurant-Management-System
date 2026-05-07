@@ -9,5 +9,6 @@ public record OrderItemRequest(
         String menuItemId,
         String name,
         Integer quantity,
-        List<String> customizations
+        List<String> customizations,
+        List<String> notes
 ) {}

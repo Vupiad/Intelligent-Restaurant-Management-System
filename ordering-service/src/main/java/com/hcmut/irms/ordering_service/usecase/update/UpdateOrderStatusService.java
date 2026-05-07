@@ -1,5 +1,6 @@
 package com.hcmut.irms.ordering_service.usecase.update;
 
+import com.hcmut.irms.ordering_service.adapter.messaging.OrderStatusWebSocketPublisher;
 import com.hcmut.irms.ordering_service.domain.Order;
 import com.hcmut.irms.ordering_service.domain.OrderStatus;
 import com.hcmut.irms.ordering_service.domain.exception.OrderNotFoundException;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UpdateOrderStatusService implements UpdateOrderStatusUseCase {
 
     private final OrderRepositoryPort orderRepositoryPort;
+    private final OrderStatusWebSocketPublisher orderStatusWebSocketPublisher;
 
     @Override
     @Transactional
@@ -36,6 +38,7 @@ public class UpdateOrderStatusService implements UpdateOrderStatusUseCase {
         order.applyStatusTransition(targetStatus);
 
         orderRepositoryPort.save(order);
+        orderStatusWebSocketPublisher.publish(String.valueOf(id), targetStatus.name());
         log.info("Order {} status updated to {}", id, targetStatus);
     }
 }

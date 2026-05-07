@@ -9,6 +9,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -40,10 +41,24 @@ public class RabbitMqConfig {
 
     @Bean
     public Binding orderStatusBinding(
-            Queue orderStatusQueue,
+            @Qualifier("orderStatusQueue") Queue orderStatusQueue,
             TopicExchange restaurantEventsExchange,
-            @Value("${app.rabbitmq.order-status-routing-key:orde8r.status.updated}") String routingKey) {
+            @Value("${app.rabbitmq.order-status-routing-key:order.status.updated}") String routingKey) {
         return BindingBuilder.bind(orderStatusQueue).to(restaurantEventsExchange).with(routingKey);
+    }
+
+    @Bean
+    public Queue menuConfirmQueue(
+            @Value("${app.rabbitmq.menu-confirm-queue:order.menu.confirm}") String queueName) {
+        return new Queue(queueName, true);
+    }
+
+    @Bean
+    public Binding menuConfirmBinding(
+            @Qualifier("menuConfirmQueue") Queue menuConfirmQueue,
+            TopicExchange restaurantEventsExchange,
+            @Value("${app.rabbitmq.menu-confirm-routing-key:menu.confirmed}") String routingKey) {
+        return BindingBuilder.bind(menuConfirmQueue).to(restaurantEventsExchange).with(routingKey);
     }
 
     // ─── JSON message converter ───────────────────────────────────────────────

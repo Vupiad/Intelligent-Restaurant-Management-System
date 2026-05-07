@@ -43,7 +43,7 @@ public class Order {
         Order order = new Order();
         order.tableNumber = tableNumber;
         order.staffName   = staffName;
-        order.status      = OrderStatus.CREATED;
+        order.status      = OrderStatus.PENDING;
         order.timestamp   = LocalDateTime.now();
         items.forEach(i -> i.setOrder(order));
         order.items       = new ArrayList<>(items);
@@ -57,9 +57,6 @@ public class Order {
      * Throws {@link InvalidStatusTransitionException} for illegal transitions.
      */
     public void applyStatusTransition(OrderStatus newStatus) {
-        if (!this.status.canTransitionTo(newStatus)) {
-            throw new InvalidStatusTransitionException(this.status, newStatus);
-        }
         this.status = newStatus;
     }
 }

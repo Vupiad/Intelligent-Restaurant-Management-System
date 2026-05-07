@@ -6,8 +6,8 @@ spring:
     name: menu-service
   datasource:
     url: jdbc:postgresql://aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres
-    username: ${SUPABASE_DB_USER}
-    password: ${SUPABASE_DB_PASSWORD}
+    username: ${MENU_SUPABASE_USER}
+    password: ${MENU_SUPABASE_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -15,6 +15,14 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  rabbitmq:
+    host: ${cloudamqp_host}
+    port: 5672
+    username: ${cloudamqp_username}
+    password: ${cloudamqp_password}
+    virtual-host: ${cloudamqp_vhost}
+    ssl:
+      enabled: false
 #  security:
 #    oauth2:
 #      resourceserver:
@@ -26,6 +34,11 @@ app:
   security:
     # Notice we use the Eureka name "auth-service" instead of localhost:8081!
     jwk-set-uri: http://auth-service/api/auth/.well-known/jwks.json
+  rabbitmq:
+    exchange: restaurant.events
+    order-created-queue: menu.order.created
+    order-created-routing-key: order.created
+    menu-confirm-routing-key: menu.confirmed
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

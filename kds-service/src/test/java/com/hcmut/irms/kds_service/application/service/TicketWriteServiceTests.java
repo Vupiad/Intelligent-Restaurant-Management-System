@@ -4,6 +4,7 @@ import com.hcmut.irms.kds_service.application.port.out.KdsWebSocketPublisher;
 import com.hcmut.irms.kds_service.application.port.out.OrderStatusPublisher;
 import com.hcmut.irms.kds_service.domain.model.KitchenTicket;
 import com.hcmut.irms.kds_service.domain.model.TicketItem;
+import com.hcmut.irms.kds_service.domain.model.TicketStatus;
 import com.hcmut.irms.kds_service.domain.repository.KitchenTicketRepository;
 import com.hcmut.irms.kds_service.infrastructure.messaging.event.OrderCreatedEvent;
 import org.junit.jupiter.api.Test;
@@ -79,6 +80,7 @@ class TicketWriteServiceTests {
         KitchenTicket savedTicket = savedTicketRef.get();
         assertNotNull(savedTicket);
         assertEquals(1, savedTicket.getItems().size());
+        assertEquals(TicketStatus.WAIT_FOR_MENU_CONFIRM, savedTicket.getStatus());
 
         TicketItem savedItem = savedTicket.getItems().get(0);
         assertEquals(List.of("Less spicy"), savedItem.getCustomizations());

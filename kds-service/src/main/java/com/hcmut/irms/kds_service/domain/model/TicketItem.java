@@ -7,17 +7,15 @@ public class TicketItem {
     private String menuItemId;
     private String itemName;
     private Integer quantity;
-    private ItemStatus status;
     private List<String> customizations = new ArrayList<>();
     private List<String> notes = new ArrayList<>();
     public TicketItem() {
     }
 
-    public TicketItem(String menuItemId, String itemName, Integer quantity, ItemStatus status, List<String> customizations, List<String> notes) {
+    public TicketItem(String menuItemId, String itemName, Integer quantity, List<String> customizations, List<String> notes) {
         this.menuItemId = menuItemId;
         this.itemName = itemName;
         this.quantity = quantity;
-        this.status = status;
         this.customizations = customizations == null ? new ArrayList<>() : new ArrayList<>(customizations);
         this.notes = notes == null ? new ArrayList<>() : new ArrayList<>(notes);
     }
@@ -44,14 +42,6 @@ public class TicketItem {
 
     public void setQuantity(Integer quantity) {
         this.quantity = quantity;
-    }
-
-    public ItemStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(ItemStatus status) {
-        this.status = status;
     }
 
     public List<String> getCustomizations() {

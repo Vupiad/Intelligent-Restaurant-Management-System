@@ -40,7 +40,8 @@ public class GetOrderService implements GetOrderUseCase {
                         i.getMenuItemId(),
                         i.getName(),
                         i.getQuantity(),
-                        i.getCustomizations()))
+                        i.getCustomizations(),
+                        i.getNotes()))
                 .toList();
 
         return new OrderResponse(
