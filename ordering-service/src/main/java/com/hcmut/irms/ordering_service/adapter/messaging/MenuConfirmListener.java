@@ -14,9 +14,8 @@ import org.springframework.stereotype.Component;
 public class MenuConfirmListener {
 
     private final UpdateOrderStatusUseCase updateOrderStatusUseCase;
-    private final OrderStatusWebSocketPublisher orderStatusWebSocketPublisher;
 
-    @RabbitListener(queues = "${app.rabbitmq.menu-confirm-queue:ordering.menu.confirm}")
+    @RabbitListener(queues = "${app.rabbitmq.menu-confirm-queue:order.menu.confirm}")
     public void onMenuConfirm(MenuConfirmEvent event) {
         try {
             Long.parseLong(event.orderId());
@@ -32,6 +31,5 @@ public class MenuConfirmListener {
                 event.orderId(), event.isAvailable(), status);
 
         updateOrderStatusUseCase.updateStatus(event.orderId(), status);
-        orderStatusWebSocketPublisher.publish(event.orderId(), status);
     }
 }

@@ -19,7 +19,7 @@ public class OrderEventConsumer {
         writeUseCase.createTicketFromEvent(event);
     }
 
-    @RabbitListener(queues = "${app.rabbitmq.menu-confirm-queue:kds.menu.confirmed}")
+    @RabbitListener(queues = "${app.rabbitmq.menu-confirm-queue:kds.menu.confirm}")
     public void consumeMenuConfirmEvent(MenuConfirmEvent event) {
         writeUseCase.confirmMenuAvailability(event.orderId(), event.isAvailable());
     }

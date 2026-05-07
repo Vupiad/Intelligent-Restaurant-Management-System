@@ -22,7 +22,7 @@ public class RabbitMqConfig {
 
     @Bean
     public Queue orderCreatedQueue(
-            @Value("${app.rabbitmq.order-created-queue:kds.order.created}") String queueName) {
+            @Value("${app.rabbitmq.order-created-queue:menu.order.created}") String queueName) {
         return new Queue(queueName, true);
     }
 

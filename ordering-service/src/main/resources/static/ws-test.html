@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Status WebSocket Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 24px;
+      max-width: 900px;
+    }
+    h1 { margin-bottom: 8px; }
+    .row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    input {
+      padding: 8px;
+      min-width: 280px;
+    }
+    button {
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    #status {
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    #logs {
+      border: 1px solid #ccc;
+      padding: 10px;
+      border-radius: 6px;
+      height: 350px;
+      overflow: auto;
+      background: #fafafa;
+      font-family: Consolas, monospace;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+<h1>Order Status WebSocket Test</h1>
+<p>Connects to <code>/ws</code> and subscribes to order status topics.</p>
+
+<div class="row">
+  <input id="baseUrl" type="text" value="http://localhost:8080" aria-label="Base URL">
+  <button id="connectBtn">Connect</button>
+  <button id="disconnectBtn" disabled>Disconnect</button>
+</div>
+
+<div class="row">
+  <input id="orderId" type="text" placeholder="Order ID (for per-order topic)">
+  <button id="subscribeGlobalBtn" disabled>Subscribe Global</button>
+  <button id="subscribeOrderBtn" disabled>Subscribe Order</button>
+  <button id="clearBtn">Clear Logs</button>
+</div>
+
+<div id="status">Status: Disconnected</div>
+<div id="logs"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.1.1/bundles/stomp.umd.min.js"></script>
+<script>
+  const statusEl = document.getElementById("status");
+  const logsEl = document.getElementById("logs");
+  const connectBtn = document.getElementById("connectBtn");
+  const disconnectBtn = document.getElementById("disconnectBtn");
+  const subscribeGlobalBtn = document.getElementById("subscribeGlobalBtn");
+  const subscribeOrderBtn = document.getElementById("subscribeOrderBtn");
+  const clearBtn = document.getElementById("clearBtn");
+  const baseUrlInput = document.getElementById("baseUrl");
+  const orderIdInput = document.getElementById("orderId");
+
+  let client = null;
+  const subscriptions = new Map();
+
+  function log(message) {
+    logsEl.textContent += `[${new Date().toLocaleTimeString()}] ${message}\n`;
+    logsEl.scrollTop = logsEl.scrollHeight;
+  }
+
+  function setConnected(connected) {
+    statusEl.textContent = `Status: ${connected ? "Connected" : "Disconnected"}`;
+    connectBtn.disabled = connected;
+    disconnectBtn.disabled = !connected;
+    subscribeGlobalBtn.disabled = !connected;
+    subscribeOrderBtn.disabled = !connected;
+  }
+
+  function topicKey(topic) {
+    return `sub:${topic}`;
+  }
+
+  function subscribe(topic) {
+    if (!client || !client.connected) {
+      log("Not connected.");
+      return;
+    }
+    const key = topicKey(topic);
+    if (subscriptions.has(key)) {
+      log(`Already subscribed: ${topic}`);
+      return;
+    }
+    const sub = client.subscribe(topic, (frame) => {
+      log(`${topic} -> ${frame.body}`);
+    });
+    subscriptions.set(key, sub);
+    log(`Subscribed: ${topic}`);
+  }
+
+  function disconnect() {
+    subscriptions.forEach((sub) => sub.unsubscribe());
+    subscriptions.clear();
+    if (client) {
+      client.deactivate();
+      client = null;
+    }
+    setConnected(false);
+    log("Disconnected.");
+  }
+
+  connectBtn.addEventListener("click", () => {
+    const baseUrl = baseUrlInput.value.trim().replace(/\/$/, "");
+    const wsUrl = baseUrl.replace(/^http/, "ws") + "/ws/order";
+
+    client = new StompJs.Client({
+      brokerURL: wsUrl,
+      reconnectDelay: 3000,
+      onConnect: () => {
+        setConnected(true);
+        log(`Connected to ${wsUrl}`);
+      },
+      onWebSocketError: (event) => {
+        log(`WebSocket error: ${event.type || "unknown"}`);
+      },
+      onStompError: (frame) => {
+        log(`STOMP error: ${frame.headers["message"] || "unknown"}`);
+      }
+    });
+
+    client.activate();
+    statusEl.textContent = "Status: Connecting...";
+  });
+
+  disconnectBtn.addEventListener("click", disconnect);
+
+  subscribeGlobalBtn.addEventListener("click", () => {
+    subscribe("/topic/orders/status");
+  });
+
+  subscribeOrderBtn.addEventListener("click", () => {
+    const orderId = orderIdInput.value.trim();
+    if (!orderId) {
+      log("Please input Order ID first.");
+      return;
+    }
+    subscribe(`/topic/orders/${orderId}/status`);
+  });
+
+  clearBtn.addEventListener("click", () => {
+    logsEl.textContent = "";
+  });
+</script>
+</body>
+</html>

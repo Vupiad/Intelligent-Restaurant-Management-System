@@ -46,6 +46,7 @@ public class SecurityConfig {
                                 "/v3/api-docs.yaml",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
+                                "/ws-test.html",
                                 "/ws/**"
                         ).permitAll()
                         // Only MANAGER and SERVER can create / read orders

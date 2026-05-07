@@ -43,6 +43,7 @@ public class CreateOrderService implements CreateOrderUseCase {
                         .name(i.name())
                         .quantity(i.quantity())
                         .customizations(i.customizations() != null ? i.customizations() : new ArrayList<>())
+                        .notes(i.notes() != null ? i.notes() : new ArrayList<>())
                         .build())
                 .toList();
 

@@ -12,6 +12,7 @@ spring:
             allowedOrigins: "*"
             allowedMethods: "*"
             allowedHeaders: "*"
+            maxAge: 3600
       routes:
         - id: auth-service-route
           uri: lb://auth-service
@@ -28,6 +29,15 @@ spring:
           predicates:
             - Path=/api/orders/**
 
+        - id: ordering-websocket-route
+          uri: lb:ws://ordering-service
+          predicates:
+            - Path=/ws/order/**
+          filters:
+            # This strips the extra CORS header coming from the KDS service
+            # so the browser only sees the Gateway's CORS header.
+            - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+
         - id: kds-service-route
           uri: lb://kds-service
           predicates:
@@ -37,6 +47,10 @@ spring:
           uri: lb:ws://kds-service
           predicates:
             - Path=/ws/kds/**
+          filters:
+            # This strips the extra CORS header coming from the KDS service
+            # so the browser only sees the Gateway's CORS header.
+            - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
 
 eureka:
   client:

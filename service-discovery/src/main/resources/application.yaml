@@ -2,7 +2,7 @@ spring:
   application:
     name: service-discovery
 server:
-  port: ${PORT:8080}
+  port: ${PORT:8761}
 
 eureka:
   instance:

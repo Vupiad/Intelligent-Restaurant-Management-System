@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KDS WebSocket Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 24px;
+            max-width: 900px;
+        }
+        .row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        input, button {
+            padding: 8px 10px;
+            font-size: 14px;
+        }
+        input {
+            min-width: 340px;
+        }
+        #log {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 10px;
+            height: 420px;
+            overflow: auto;
+            background: #111;
+            color: #ddd;
+            white-space: pre-wrap;
+            font-family: Consolas, monospace;
+            font-size: 13px;
+        }
+        .status {
+            font-weight: bold;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.2.0/bundles/stomp.umd.min.js"></script>
+</head>
+<body>
+<h2>KDS WebSocket STOMP Test</h2>
+<p>Endpoint: <code>/ws/kds</code> | Topics: <code>/topic/kitchen/new-tickets</code>, <code>/topic/kitchen/ticket-updates</code>, <code>/topic/kitchen/completed-tickets</code></p>
+
+<div class="row">
+    <input id="brokerUrl" type="text" value="ws://localhost:8080/ws/kds" />
+    <button id="connectBtn">Connect</button>
+    <button id="disconnectBtn" disabled>Disconnect</button>
+</div>
+
+<div class="row">
+    <span class="status">Status:</span>
+    <span id="connStatus">Disconnected</span>
+</div>
+
+<div id="log"></div>
+
+<script>
+    const logEl = document.getElementById("log");
+    const statusEl = document.getElementById("connStatus");
+    const connectBtn = document.getElementById("connectBtn");
+    const disconnectBtn = document.getElementById("disconnectBtn");
+    const brokerUrlInput = document.getElementById("brokerUrl");
+
+    let client = null;
+
+    function log(message) {
+        const now = new Date().toISOString();
+        logEl.textContent += `[${now}] ${message}\n`;
+        logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function setConnected(connected) {
+        statusEl.textContent = connected ? "Connected" : "Disconnected";
+        connectBtn.disabled = connected;
+        disconnectBtn.disabled = !connected;
+    }
+
+    function subscribeToTopic(topic) {
+        client.subscribe(topic, frame => {
+            let body = frame.body;
+            try {
+                body = JSON.stringify(JSON.parse(frame.body), null, 2);
+            } catch (_) {
+                // Keep plain string payloads as-is (for completed ticket ID).
+            }
+            log(`Message from ${topic}:\n${body}`);
+        });
+        log(`Subscribed: ${topic}`);
+    }
+
+    connectBtn.addEventListener("click", () => {
+        if (client && client.active) {
+            return;
+        }
+
+        client = new StompJs.Client({
+            brokerURL: brokerUrlInput.value.trim(),
+            reconnectDelay: 3000,
+            onConnect: () => {
+                setConnected(true);
+                log("STOMP connected");
+                subscribeToTopic("/topic/kitchen/new-tickets");
+                subscribeToTopic("/topic/kitchen/ticket-updates");
+                subscribeToTopic("/topic/kitchen/completed-tickets");
+            },
+            onStompError: frame => {
+                log(`Broker error: ${frame.headers["message"] || "unknown"}\n${frame.body || ""}`);
+            },
+            onWebSocketError: error => {
+                log(`WebSocket error: ${error}`);
+            },
+            onWebSocketClose: () => {
+                setConnected(false);
+                log("WebSocket closed");
+            }
+        });
+
+        log(`Connecting to ${brokerUrlInput.value.trim()}...`);
+        client.activate();
+    });
+
+    disconnectBtn.addEventListener("click", async () => {
+        if (!client) {
+            return;
+        }
+        await client.deactivate();
+        setConnected(false);
+        log("Disconnected");
+    });
+</script>
+</body>
+</html>

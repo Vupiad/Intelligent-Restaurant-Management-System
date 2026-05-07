@@ -4,6 +4,6 @@ import com.hcmut.irms.kds_service.infrastructure.messaging.event.OrderCreatedEve
 
 public interface TicketWriteUseCase {
     void createTicketFromEvent(OrderCreatedEvent event);
-
+    void confirmMenuAvailability(String ticketId, boolean isAvailable);
     void updateOrderStatus(String ticketId, TicketStatus status);
 }

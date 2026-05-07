@@ -49,7 +49,7 @@ public class RabbitMqConfig {
 
     @Bean
     public Queue menuConfirmQueue(
-            @Value("${app.rabbitmq.menu-confirm-queue:ordering.menu.confirm}") String queueName) {
+            @Value("${app.rabbitmq.menu-confirm-queue:order.menu.confirm}") String queueName) {
         return new Queue(queueName, true);
     }
 

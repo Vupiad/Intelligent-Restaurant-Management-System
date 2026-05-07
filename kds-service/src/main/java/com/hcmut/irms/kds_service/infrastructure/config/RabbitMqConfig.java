@@ -31,7 +31,7 @@ public class RabbitMqConfig {
     }
 
     @Bean
-    public Queue menuConfirmQueue(@Value("${app.rabbitmq.menu-confirm-queue:kds.menu.confirmed}") String queueName) {
+    public Queue menuConfirmQueue(@Value("${app.rabbitmq.menu-confirm-queue:kds.menu.confirm}") String queueName) {
         return new Queue(queueName, true);
     }
 

@@ -20,4 +20,9 @@ public class TicketReadService implements TicketReadUseCase {
     public List<KitchenTicket> getActiveTickets() {
         return repository.findByStatusNotIn(List.of(TicketStatus.WAIT_FOR_MENU_CONFIRM,TicketStatus.REJECT, TicketStatus.READY, TicketStatus.SERVED));
     }
+
+    @Override
+    public List<TicketStatus> getTicketStatuses() {
+        return List.of(TicketStatus.values());
+    }
 }
