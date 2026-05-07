@@ -6,7 +6,7 @@ spring:
     name: auth-service
   datasource:
 
-    url: jdbc:postgresql://aws-1-ap-southeast-2.pooler.supabase.com:6543/postgres?sslmode=require
+    url: jdbc:postgresql://aws-1-ap-southeast-2.pooler.supabase.com:6543/postgres?sslmode=require&options=project=towikfeiuzekwdyrzxtg
 
     username: ${AUTH_SUPABASE_USER}
 
