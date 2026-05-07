@@ -21,8 +21,8 @@ services:
       PORT: 8081
       EUREKA_DEFAULT_ZONE: http://service-discovery:8761/eureka/
       EUREKA_INSTANCE_HOSTNAME: auth-service
-      SUPABASE_USER: ${AUTH_SUPABASE_USER}
-      SUPABASE_PASSWORD: ${AUTH_SUPABASE_PASSWORD}
+      AUTH_SUPABASE_USER: ${AUTH_SUPABASE_USER}
+      AUTH_SUPABASE_PASSWORD: ${AUTH_SUPABASE_PASSWORD}
       JWT_KEYSTORE_PASSWORD: ${JWT_KEYSTORE_PASSWORD}
       JWT_KEY_PASSWORD: ${JWT_KEY_PASSWORD}
     ports:
@@ -41,8 +41,8 @@ services:
       PORT: 8082
       EUREKA_DEFAULT_ZONE: http://service-discovery:8761/eureka/
       EUREKA_INSTANCE_HOSTNAME: menu-service
-      SUPABASE_DB_USER: ${MENU_SUPABASE_USER}
-      SUPABASE_DB_PASSWORD: ${MENU_SUPABASE_PASSWORD}
+      MENU_SUPABASE_USER: ${MENU_SUPABASE_USER}
+      MENU_SUPABASE_PASSWORD: ${MENU_SUPABASE_PASSWORD}
       cloudamqp_host: ${cloudamqp_host}
       cloudamqp_username: ${cloudamqp_username}
       cloudamqp_password: ${cloudamqp_password}
@@ -63,9 +63,9 @@ services:
       PORT: 8085
       EUREKA_DEFAULT_ZONE: http://service-discovery:8761/eureka/
       EUREKA_INSTANCE_HOSTNAME: ordering-service
-      SUPABASE_DB_URL: ${ORDER_SUPABASE_URL}
-      SUPABASE_DB_USER: ${ORDER_SUPABASE_USER}
-      SUPABASE_DB_PASSWORD: ${ORDER_SUPABASE_PASSWORD}
+      ORDER_SUPABASE_URL: ${ORDER_SUPABASE_URL}
+      ORDER_SUPABASE_USER: ${ORDER_SUPABASE_USER}
+      ORDER_SUPABASE_PASSWORD: ${ORDER_SUPABASE_PASSWORD}
       cloudamqp_host: ${cloudamqp_host}
       cloudamqp_username: ${cloudamqp_username}
       cloudamqp_password: ${cloudamqp_password}

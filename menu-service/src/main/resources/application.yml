@@ -5,7 +5,7 @@ spring:
   application:
     name: menu-service
   datasource:
-    url: jdbc:postgresql://aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres
+    url: jdbc:postgresql://aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require&options=project=rlaylxgbxiiadqbtelaz
     username: ${MENU_SUPABASE_USER}
     password: ${MENU_SUPABASE_PASSWORD}
     driver-class-name: org.postgresql.Driver
