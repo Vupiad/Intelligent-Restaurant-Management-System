@@ -6,9 +6,9 @@ spring:
     name: ordering-service
 
   datasource:
-    url: ${SUPABASE_DB_URL}
-    username: ${SUPABASE_DB_USER}
-    password: ${SUPABASE_DB_PASSWORD}
+    url: ${ORDER_SUPABASE_URL}
+    username: ${ORDER_SUPABASE_USER}
+    password: ${ORDER_SUPABASE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:

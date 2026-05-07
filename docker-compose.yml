@@ -1,0 +1,123 @@
+services:
+  service-discovery:
+    build:
+      context: .\service-discovery
+      dockerfile: Dockerfile
+    container_name: service-discovery
+    environment:
+      PORT: 8761
+      EUREKA_HOSTNAME: service-discovery
+    ports:
+      - "8761:8761"
+    networks:
+      - irms-net
+
+  auth-service:
+    build:
+      context: .\auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    environment:
+      PORT: 8081
+      EUREKA_DEFAULT_ZONE: http://service-discovery:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: auth-service
+      SUPABASE_USER: ${AUTH_SUPABASE_USER}
+      SUPABASE_PASSWORD: ${AUTH_SUPABASE_PASSWORD}
+      JWT_KEYSTORE_PASSWORD: ${JWT_KEYSTORE_PASSWORD}
+      JWT_KEY_PASSWORD: ${JWT_KEY_PASSWORD}
+    ports:
+      - "8081:8081"
+    depends_on:
+      - service-discovery
+    networks:
+      - irms-net
+
+  menu-service:
+    build:
+      context: .\menu-service
+      dockerfile: Dockerfile
+    container_name: menu-service
+    environment:
+      PORT: 8082
+      EUREKA_DEFAULT_ZONE: http://service-discovery:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: menu-service
+      SUPABASE_DB_USER: ${MENU_SUPABASE_USER}
+      SUPABASE_DB_PASSWORD: ${MENU_SUPABASE_PASSWORD}
+      cloudamqp_host: ${cloudamqp_host}
+      cloudamqp_username: ${cloudamqp_username}
+      cloudamqp_password: ${cloudamqp_password}
+      cloudamqp_vhost: ${cloudamqp_vhost}
+    ports:
+      - "8082:8082"
+    depends_on:
+      - service-discovery
+    networks:
+      - irms-net
+
+  ordering-service:
+    build:
+      context: .\ordering-service
+      dockerfile: Dockerfile
+    container_name: ordering-service
+    environment:
+      PORT: 8085
+      EUREKA_DEFAULT_ZONE: http://service-discovery:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: ordering-service
+      SUPABASE_DB_URL: ${ORDER_SUPABASE_URL}
+      SUPABASE_DB_USER: ${ORDER_SUPABASE_USER}
+      SUPABASE_DB_PASSWORD: ${ORDER_SUPABASE_PASSWORD}
+      cloudamqp_host: ${cloudamqp_host}
+      cloudamqp_username: ${cloudamqp_username}
+      cloudamqp_password: ${cloudamqp_password}
+      cloudamqp_vhost: ${cloudamqp_vhost}
+    ports:
+      - "8085:8085"
+    depends_on:
+      - service-discovery
+    networks:
+      - irms-net
+
+  kds-service:
+    build:
+      context: .\kds-service
+      dockerfile: Dockerfile
+    container_name: kds-service
+    environment:
+      PORT: 8089
+      EUREKA_DEFAULT_ZONE: http://service-discovery:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: kds-service
+      mongo_uri: ${mongo_uri}
+      cloudamqp_host: ${cloudamqp_host}
+      cloudamqp_username: ${cloudamqp_username}
+      cloudamqp_password: ${cloudamqp_password}
+      cloudamqp_vhost: ${cloudamqp_vhost}
+    ports:
+      - "8089:8089"
+    depends_on:
+      - service-discovery
+    networks:
+      - irms-net
+
+  api-gateway:
+    build:
+      context: .\api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    environment:
+      PORT: 8080
+      EUREKA_DEFAULT_ZONE: http://service-discovery:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - service-discovery
+      - auth-service
+      - menu-service
+      - ordering-service
+      - kds-service
+    networks:
+      - irms-net
+
+networks:
+  irms-net:
+    driver: bridge

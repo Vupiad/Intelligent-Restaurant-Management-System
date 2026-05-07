@@ -6,8 +6,8 @@ spring:
     name: menu-service
   datasource:
     url: jdbc:postgresql://aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres
-    username: ${SUPABASE_DB_USER}
-    password: ${SUPABASE_DB_PASSWORD}
+    username: ${MENU_SUPABASE_USER}
+    password: ${MENU_SUPABASE_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
