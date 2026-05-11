@@ -1,13 +1,14 @@
 package com.hcmut.irms.kds_service.application.service;
 
-import com.hcmut.irms.kds_service.application.port.out.KdsWebSocketPublisher;
-import com.hcmut.irms.kds_service.application.port.out.OrderStatusPublisher;
+import com.hcmut.irms.kds_service.application.command.CreateTicketCommand;
 import com.hcmut.irms.kds_service.application.mapper.KitchenTicketMapper;
+import com.hcmut.irms.kds_service.application.port.out.KdsWebSocketPublisher;
+import com.hcmut.irms.kds_service.application.port.out.KitchenTicketFinder;
+import com.hcmut.irms.kds_service.application.port.out.KitchenTicketSaver;
+import com.hcmut.irms.kds_service.application.port.out.OrderStatusPublisher;
 import com.hcmut.irms.kds_service.domain.model.KitchenTicket;
 import com.hcmut.irms.kds_service.domain.model.TicketItem;
 import com.hcmut.irms.kds_service.domain.model.TicketStatus;
-import com.hcmut.irms.kds_service.domain.repository.KitchenTicketRepository;
-import com.hcmut.irms.kds_service.infrastructure.messaging.event.OrderCreatedEvent;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Proxy;
@@ -23,9 +24,9 @@ class TicketWriteServiceTests {
         AtomicReference<KitchenTicket> savedTicketRef = new AtomicReference<>();
         AtomicReference<KitchenTicket> broadcastTicketRef = new AtomicReference<>();
 
-        KitchenTicketRepository repository = (KitchenTicketRepository) Proxy.newProxyInstance(
-                KitchenTicketRepository.class.getClassLoader(),
-                new Class[]{KitchenTicketRepository.class},
+        KitchenTicketSaver ticketSaver = (KitchenTicketSaver) Proxy.newProxyInstance(
+                KitchenTicketSaver.class.getClassLoader(),
+                new Class[]{KitchenTicketSaver.class},
                 (proxy, method, args) -> {
                     if ("save".equals(method.getName())) {
                         KitchenTicket ticket = (KitchenTicket) args[0];
@@ -61,19 +62,21 @@ class TicketWriteServiceTests {
         };
 
         TicketWriteService service = new TicketWriteService(
-                repository,
+                ticketSaver,
+                (KitchenTicketFinder) ticketId -> {
+                    throw new UnsupportedOperationException("Not used in this test");
+                },
                 webSocketPublisher,
                 orderStatusPublisher,
                 new KitchenTicketMapper(),
                 new TicketStatusPolicy()
         );
-        OrderCreatedEvent event = new OrderCreatedEvent(
-                "evt-1",
+        CreateTicketCommand command = new CreateTicketCommand(
                 "order-1",
                 7,
                 "waiter-1",
                 "2026-04-30T09:15:00Z",
-                List.of(new OrderCreatedEvent.OrderItemPayload(
+                List.of(new CreateTicketCommand.Item(
                         "mi-1",
                         "Fried Rice",
                         2,
@@ -82,7 +85,7 @@ class TicketWriteServiceTests {
                 ))
         );
 
-        service.createTicketFromEvent(event);
+        service.createTicket(command);
 
         KitchenTicket savedTicket = savedTicketRef.get();
         assertNotNull(savedTicket);

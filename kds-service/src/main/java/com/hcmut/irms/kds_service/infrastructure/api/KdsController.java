@@ -1,6 +1,7 @@
 package com.hcmut.irms.kds_service.infrastructure.api;
 
-import com.hcmut.irms.kds_service.application.port.in.TicketReadUseCase;
+import com.hcmut.irms.kds_service.application.port.in.GetActiveTicketsUseCase;
+import com.hcmut.irms.kds_service.application.port.in.ListTicketStatusesUseCase;
 import com.hcmut.irms.kds_service.application.port.in.UpdateTicketStatusUseCase;
 import com.hcmut.irms.kds_service.domain.model.KitchenTicket;
 import com.hcmut.irms.kds_service.domain.model.TicketStatus;
@@ -14,21 +15,25 @@ import java.util.List;
 @RequestMapping("/api/kds/tickets")
 public class KdsController {
     private final UpdateTicketStatusUseCase updateTicketStatusUseCase;
-    private final TicketReadUseCase readUseCase;
+    private final GetActiveTicketsUseCase getActiveTicketsUseCase;
+    private final ListTicketStatusesUseCase listTicketStatusesUseCase;
 
-    public KdsController(UpdateTicketStatusUseCase updateTicketStatusUseCase, TicketReadUseCase readUseCase) {
+    public KdsController(UpdateTicketStatusUseCase updateTicketStatusUseCase,
+                         GetActiveTicketsUseCase getActiveTicketsUseCase,
+                         ListTicketStatusesUseCase listTicketStatusesUseCase) {
         this.updateTicketStatusUseCase = updateTicketStatusUseCase;
-        this.readUseCase = readUseCase;
+        this.getActiveTicketsUseCase = getActiveTicketsUseCase;
+        this.listTicketStatusesUseCase = listTicketStatusesUseCase;
     }
 
     @GetMapping("/active")
     public ResponseEntity<List<KitchenTicket>> getActiveTickets() {
-        return ResponseEntity.ok(readUseCase.getActiveTickets());
+        return ResponseEntity.ok(getActiveTicketsUseCase.getActiveTickets());
     }
 
     @GetMapping("/statuses")
     public ResponseEntity<List<TicketStatus>> getTicketStatuses() {
-        return ResponseEntity.ok(readUseCase.getTicketStatuses());
+        return ResponseEntity.ok(listTicketStatusesUseCase.getTicketStatuses());
     }
 
     @PutMapping("/{ticketId}/status")

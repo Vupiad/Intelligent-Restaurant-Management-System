@@ -1,7 +1,7 @@
 package com.hcmut.irms.kds_service.application.port.in;
 
-import com.hcmut.irms.kds_service.infrastructure.messaging.event.OrderCreatedEvent;
+import com.hcmut.irms.kds_service.application.command.CreateTicketCommand;
 
 public interface CreateTicketUseCase {
-    void createTicketFromEvent(OrderCreatedEvent event);
+    void createTicket(CreateTicketCommand command);
 }

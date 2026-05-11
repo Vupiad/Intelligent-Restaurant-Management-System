@@ -1,8 +1,8 @@
 package com.hcmut.irms.menu_service.mapper;
 
-import com.hcmut.irms.menu_service.dto.MenuItemAvailabilityResponseDTO;
-import com.hcmut.irms.menu_service.dto.MenuItemRequestDTO;
-import com.hcmut.irms.menu_service.dto.MenuItemResponseDTO;
+import com.hcmut.irms.menu_service.application.MenuItemAvailabilityView;
+import com.hcmut.irms.menu_service.application.MenuItemCommand;
+import com.hcmut.irms.menu_service.application.MenuItemView;
 import com.hcmut.irms.menu_service.model.Category;
 import com.hcmut.irms.menu_service.model.MenuItem;
 import com.hcmut.irms.menu_service.model.Promotion;
@@ -21,41 +21,38 @@ public class MenuItemMapper {
         this.priceService = priceService;
     }
 
-    public void applyToItem(MenuItem item, MenuItemRequestDTO request, Category category) {
+    public void applyToItem(MenuItem item, MenuItemCommand command, Category category) {
         item.setCategory(category);
-        item.setName(request.getName());
-        item.setDescription(request.getDescription());
-        item.setBasePrice(request.getBasePrice());
-        item.setImageUrl(request.getImageUrl());
-        item.setAvailable(request.getIsAvailable() == null || request.getIsAvailable());
-        item.setCustomizations(request.getCustomizations() == null
+        item.setName(command.name());
+        item.setDescription(command.description());
+        item.setBasePrice(command.basePrice());
+        item.setImageUrl(command.imageUrl());
+        item.setAvailable(command.available() == null || command.available());
+        item.setCustomizations(command.customizations() == null
                 ? new ArrayList<>()
-                : new ArrayList<>(request.getCustomizations()));
+                : new ArrayList<>(command.customizations()));
     }
 
-    public MenuItemResponseDTO toResponse(MenuItem item, LocalDateTime now) {
+    public MenuItemView toView(MenuItem item, LocalDateTime now) {
         List<String> activePromotionNames = priceService.getActivePromotions(item, now).stream()
                 .map(Promotion::getName)
                 .toList();
 
-        MenuItemResponseDTO response = new MenuItemResponseDTO();
-        response.setId(item.getId());
-        response.setCategoryId(item.getCategory().getId());
-        response.setName(item.getName());
-        response.setDescription(item.getDescription());
-        response.setOriginalPrice(item.getBasePrice());
-        response.setFinalCalculatedPrice(priceService.calculateFinalPrice(item, now));
-        response.setAvailable(item.isAvailable());
-        response.setImageUrl(item.getImageUrl());
-        response.setCustomizations(item.getCustomizations());
-        response.setActivePromotions(activePromotionNames);
-        return response;
+        return new MenuItemView(
+                item.getId(),
+                item.getCategory().getId(),
+                item.getName(),
+                item.getDescription(),
+                item.getBasePrice(),
+                priceService.calculateFinalPrice(item, now),
+                item.isAvailable(),
+                item.getImageUrl(),
+                item.getCustomizations(),
+                activePromotionNames
+        );
     }
 
-    public MenuItemAvailabilityResponseDTO toAvailabilityResponse(MenuItem item) {
-        MenuItemAvailabilityResponseDTO response = new MenuItemAvailabilityResponseDTO();
-        response.setItemId(item.getId());
-        response.setAvailableForOrder(item.isAvailable());
-        return response;
+    public MenuItemAvailabilityView toAvailabilityView(MenuItem item) {
+        return new MenuItemAvailabilityView(item.getId(), item.isAvailable());
     }
 }

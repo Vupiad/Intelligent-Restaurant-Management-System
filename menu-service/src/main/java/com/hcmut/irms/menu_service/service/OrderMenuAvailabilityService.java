@@ -2,7 +2,8 @@ package com.hcmut.irms.menu_service.service;
 
 import com.hcmut.irms.menu_service.model.MenuItem;
 import com.hcmut.irms.menu_service.port.MenuConfirmationPublisherPort;
-import com.hcmut.irms.menu_service.repository.MenuItemRepository;
+import com.hcmut.irms.menu_service.port.MenuItemBulkReader;
+import com.hcmut.irms.menu_service.usecase.ConfirmOrderMenuAvailabilityUseCase;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,16 +13,17 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
-public class OrderMenuAvailabilityService {
-    private final MenuItemRepository menuItemRepository;
+public class OrderMenuAvailabilityService implements ConfirmOrderMenuAvailabilityUseCase {
+    private final MenuItemBulkReader menuItemBulkReader;
     private final MenuConfirmationPublisherPort menuConfirmationPublisher;
 
-    public OrderMenuAvailabilityService(MenuItemRepository menuItemRepository,
+    public OrderMenuAvailabilityService(MenuItemBulkReader menuItemBulkReader,
                                         MenuConfirmationPublisherPort menuConfirmationPublisher) {
-        this.menuItemRepository = menuItemRepository;
+        this.menuItemBulkReader = menuItemBulkReader;
         this.menuConfirmationPublisher = menuConfirmationPublisher;
     }
 
+    @Override
     @Transactional(readOnly = true)
     public void confirmAvailability(OrderMenuAvailabilityCommand command) {
         if (command == null || command.orderId() == null || command.orderId().isBlank()) {
@@ -46,7 +48,7 @@ public class OrderMenuAvailabilityService {
         }
 
         Map<UUID, Boolean> availabilityById = new HashMap<>();
-        for (MenuItem item : menuItemRepository.findAllById(menuItemIds)) {
+        for (MenuItem item : menuItemBulkReader.findAllById(menuItemIds)) {
             availabilityById.put(item.getId(), item.isAvailable());
         }
 

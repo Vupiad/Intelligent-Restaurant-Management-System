@@ -1,49 +1,55 @@
 package com.hcmut.irms.menu_service.service;
 
-import com.hcmut.irms.menu_service.dto.PromotionResponseDTO;
+import com.hcmut.irms.menu_service.application.PromotionView;
+import com.hcmut.irms.menu_service.exception.MenuNotFoundException;
 import com.hcmut.irms.menu_service.mapper.PromotionMapper;
 import com.hcmut.irms.menu_service.model.Promotion;
-import com.hcmut.irms.menu_service.repository.PromotionRepository;
-import com.hcmut.irms.menu_service.usecase.PromotionReadUseCase;
-import org.springframework.http.HttpStatus;
+import com.hcmut.irms.menu_service.port.PromotionCatalog;
+import com.hcmut.irms.menu_service.port.PromotionReader;
+import com.hcmut.irms.menu_service.usecase.GetPromotionUseCase;
+import com.hcmut.irms.menu_service.usecase.ListActivePromotionsUseCase;
+import com.hcmut.irms.menu_service.usecase.ListPromotionsUseCase;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.UUID;
 
 @Service
-public class PromotionReadService implements PromotionReadUseCase {
-    private final PromotionRepository promoRepo;
+public class PromotionReadService implements ListPromotionsUseCase, ListActivePromotionsUseCase, GetPromotionUseCase {
+    private final PromotionCatalog promotionCatalog;
+    private final PromotionReader promotionReader;
     private final PromotionMapper promotionMapper;
 
-    public PromotionReadService(PromotionRepository promoRepo, PromotionMapper promotionMapper) {
-        this.promoRepo = promoRepo;
+    public PromotionReadService(PromotionCatalog promotionCatalog,
+                                PromotionReader promotionReader,
+                                PromotionMapper promotionMapper) {
+        this.promotionCatalog = promotionCatalog;
+        this.promotionReader = promotionReader;
         this.promotionMapper = promotionMapper;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<PromotionResponseDTO> getAllPromotions() {
-        return promoRepo.findAll().stream()
-                .map(promotionMapper::toResponse)
+    public List<PromotionView> getAllPromotions() {
+        return promotionCatalog.findAll().stream()
+                .map(promotionMapper::toView)
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<PromotionResponseDTO> getActivePromotions() {
-        return promoRepo.findActivePromotions().stream()
-                .map(promotionMapper::toResponse)
+    public List<PromotionView> getActivePromotions() {
+        return promotionCatalog.findActivePromotions().stream()
+                .map(promotionMapper::toView)
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public PromotionResponseDTO getPromotionById(UUID promotionId) {
-        Promotion promotion = promoRepo.findById(promotionId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Promotion not found: " + promotionId));
-        return promotionMapper.toResponse(promotion);
+    public PromotionView getPromotionById(UUID promotionId) {
+        Promotion promotion = promotionReader.findById(promotionId)
+                .orElseThrow(() -> new MenuNotFoundException("Promotion not found: " + promotionId));
+        return promotionMapper.toView(promotion);
     }
 }

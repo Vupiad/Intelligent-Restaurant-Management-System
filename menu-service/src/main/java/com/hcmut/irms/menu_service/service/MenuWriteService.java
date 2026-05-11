@@ -1,116 +1,123 @@
 package com.hcmut.irms.menu_service.service;
 
-import com.hcmut.irms.menu_service.dto.MenuItemRequestDTO;
-import com.hcmut.irms.menu_service.dto.MenuItemResponseDTO;
+import com.hcmut.irms.menu_service.application.MenuItemCommand;
+import com.hcmut.irms.menu_service.application.MenuItemView;
+import com.hcmut.irms.menu_service.exception.MenuNotFoundException;
 import com.hcmut.irms.menu_service.mapper.MenuItemMapper;
 import com.hcmut.irms.menu_service.model.Category;
 import com.hcmut.irms.menu_service.model.MenuItem;
 import com.hcmut.irms.menu_service.model.Promotion;
-import com.hcmut.irms.menu_service.repository.CategoryRepository;
-import com.hcmut.irms.menu_service.repository.MenuItemRepository;
-import com.hcmut.irms.menu_service.repository.PromotionRepository;
-import com.hcmut.irms.menu_service.usecase.MenuWriteUseCase;
+import com.hcmut.irms.menu_service.port.CategoryReferenceProvider;
+import com.hcmut.irms.menu_service.port.MenuItemPromotionReader;
+import com.hcmut.irms.menu_service.port.MenuItemWriter;
+import com.hcmut.irms.menu_service.port.PromotionReader;
+import com.hcmut.irms.menu_service.usecase.ApplyMenuItemPromotionUseCase;
+import com.hcmut.irms.menu_service.usecase.CreateMenuItemUseCase;
+import com.hcmut.irms.menu_service.usecase.DeleteMenuItemUseCase;
+import com.hcmut.irms.menu_service.usecase.RemoveMenuItemPromotionUseCase;
+import com.hcmut.irms.menu_service.usecase.UpdateMenuItemUseCase;
 import com.hcmut.irms.menu_service.validation.MenuItemRequestValidator;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
-public class MenuWriteService implements MenuWriteUseCase {
-    private final MenuItemRepository itemRepo;
-    private final CategoryRepository categoryRepo;
-    private final PromotionRepository promoRepo;
+public class MenuWriteService implements CreateMenuItemUseCase, UpdateMenuItemUseCase, DeleteMenuItemUseCase,
+        ApplyMenuItemPromotionUseCase, RemoveMenuItemPromotionUseCase {
+    private final MenuItemPromotionReader itemPromotionReader;
+    private final MenuItemWriter itemWriter;
+    private final CategoryReferenceProvider categoryReferenceProvider;
+    private final PromotionReader promotionReader;
     private final MenuItemRequestValidator requestValidator;
     private final MenuItemMapper menuItemMapper;
 
     public MenuWriteService(
-            MenuItemRepository itemRepo,
-            CategoryRepository categoryRepo,
-            PromotionRepository promoRepo,
+            MenuItemPromotionReader itemPromotionReader,
+            MenuItemWriter itemWriter,
+            CategoryReferenceProvider categoryReferenceProvider,
+            PromotionReader promotionReader,
             MenuItemRequestValidator requestValidator,
             MenuItemMapper menuItemMapper
     ) {
-        this.itemRepo = itemRepo;
-        this.categoryRepo = categoryRepo;
-        this.promoRepo = promoRepo;
+        this.itemPromotionReader = itemPromotionReader;
+        this.itemWriter = itemWriter;
+        this.categoryReferenceProvider = categoryReferenceProvider;
+        this.promotionReader = promotionReader;
         this.requestValidator = requestValidator;
         this.menuItemMapper = menuItemMapper;
     }
 
     @Override
     @Transactional
-    public MenuItemResponseDTO createItem(MenuItemRequestDTO request) {
-        requestValidator.validate(request);
+    public MenuItemView createItem(MenuItemCommand command) {
+        requestValidator.validate(command);
         MenuItem item = new MenuItem();
-        applyRequestToItem(item, request);
-        MenuItem saved = itemRepo.save(item);
+        applyCommandToItem(item, command);
+        MenuItem saved = itemWriter.save(item);
         return toResponse(saved);
     }
 
     @Override
     @Transactional
-    public MenuItemResponseDTO updateItem(UUID menuItemId, MenuItemRequestDTO request) {
-        requestValidator.validate(request);
-        MenuItem existing = itemRepo.findByIdWithPromotions(menuItemId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Menu item not found: " + menuItemId));
+    public MenuItemView updateItem(UUID menuItemId, MenuItemCommand command) {
+        requestValidator.validate(command);
+        MenuItem existing = itemPromotionReader.findByIdWithPromotions(menuItemId)
+                .orElseThrow(() -> new MenuNotFoundException("Menu item not found: " + menuItemId));
 
-        applyRequestToItem(existing, request);
-        MenuItem updated = itemRepo.save(existing);
+        applyCommandToItem(existing, command);
+        MenuItem updated = itemWriter.save(existing);
         return toResponse(updated);
     }
 
     @Override
     @Transactional
     public void deleteItem(UUID menuItemId) {
-        MenuItem existing = itemRepo.findByIdWithPromotions(menuItemId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Menu item not found: " + menuItemId));
+        MenuItem existing = itemPromotionReader.findByIdWithPromotions(menuItemId)
+                .orElseThrow(() -> new MenuNotFoundException("Menu item not found: " + menuItemId));
         existing.getPromotions().clear();
-        itemRepo.delete(existing);
+        itemWriter.delete(existing);
     }
 
     @Override
     @Transactional
     public void applyPromotionToItem(UUID menuItemId, UUID promotionId) {
-        MenuItem item = itemRepo.findByIdWithPromotions(menuItemId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Menu item not found: " + menuItemId));
+        MenuItem item = itemPromotionReader.findByIdWithPromotions(menuItemId)
+                .orElseThrow(() -> new MenuNotFoundException("Menu item not found: " + menuItemId));
 
-        Promotion promotion = promoRepo.findById(promotionId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Promotion not found: " + promotionId));
+        Promotion promotion = promotionReader.findById(promotionId)
+                .orElseThrow(() -> new MenuNotFoundException("Promotion not found: " + promotionId));
 
         boolean alreadyApplied = item.getPromotions().stream()
                 .anyMatch(existing -> existing.getId().equals(promotionId));
         if (!alreadyApplied) {
             item.getPromotions().add(promotion);
-            itemRepo.save(item);
+            itemWriter.save(item);
         }
     }
 
     @Override
     @Transactional
     public void removePromotionFromItem(UUID menuItemId, UUID promotionId) {
-        MenuItem item = itemRepo.findByIdWithPromotions(menuItemId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Menu item not found: " + menuItemId));
+        MenuItem item = itemPromotionReader.findByIdWithPromotions(menuItemId)
+                .orElseThrow(() -> new MenuNotFoundException("Menu item not found: " + menuItemId));
 
         boolean removed = item.getPromotions().removeIf(promotion -> promotion.getId().equals(promotionId));
         if (!removed) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
+            throw new MenuNotFoundException(
                     "Promotion " + promotionId + " is not linked to menu item " + menuItemId
             );
         }
-        itemRepo.save(item);
+        itemWriter.save(item);
     }
 
-    private void applyRequestToItem(MenuItem item, MenuItemRequestDTO request) {
-        Category category = categoryRepo.getReferenceById(request.getCategoryId());
-        menuItemMapper.applyToItem(item, request, category);
+    private void applyCommandToItem(MenuItem item, MenuItemCommand command) {
+        Category category = categoryReferenceProvider.getReferenceById(command.categoryId());
+        menuItemMapper.applyToItem(item, command, category);
     }
 
-    private MenuItemResponseDTO toResponse(MenuItem item) {
-        return menuItemMapper.toResponse(item, LocalDateTime.now());
+    private MenuItemView toResponse(MenuItem item) {
+        return menuItemMapper.toView(item, LocalDateTime.now());
     }
 }

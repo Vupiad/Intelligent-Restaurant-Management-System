@@ -2,12 +2,12 @@ package com.hcmut.irms.ordering_service.usecase.create;
 
 import com.hcmut.irms.ordering_service.domain.Order;
 import com.hcmut.irms.ordering_service.domain.OrderItem;
-import com.hcmut.irms.ordering_service.dto.api.CreateOrderRequest;
-import com.hcmut.irms.ordering_service.dto.api.OrderResponse;
 import com.hcmut.irms.ordering_service.dto.event.OrderCreatedEvent;
 import com.hcmut.irms.ordering_service.mapper.OrderMapper;
 import com.hcmut.irms.ordering_service.port.OrderEventPublisherPort;
 import com.hcmut.irms.ordering_service.port.OrderRepositoryPort;
+import com.hcmut.irms.ordering_service.usecase.model.CreateOrderCommand;
+import com.hcmut.irms.ordering_service.usecase.model.OrderResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,11 +25,11 @@ public class CreateOrderService implements CreateOrderUseCase {
 
     @Override
     @Transactional
-    public OrderResponse createOrder(CreateOrderRequest request, String bearerToken) {
+    public OrderResult createOrder(CreateOrderCommand command) {
 
-        List<OrderItem> orderItems = orderMapper.toOrderItems(request);
+        List<OrderItem> orderItems = orderMapper.toOrderItems(command);
 
-        Order order = Order.create(request.tableNumber(), request.staffName(), orderItems);
+        Order order = Order.create(command.tableNumber(), command.staffName(), orderItems);
 
         Order saved = orderRepositoryPort.save(order);
 
@@ -37,6 +37,6 @@ public class CreateOrderService implements CreateOrderUseCase {
 
         orderEventPublisherPort.publishOrderCreated(event);
 
-        return orderMapper.toResponse(saved);
+        return orderMapper.toResult(saved);
     }
 }

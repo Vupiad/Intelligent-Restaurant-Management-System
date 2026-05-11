@@ -1,31 +1,36 @@
 package com.hcmut.irms.kds_service.application.service;
 
+import com.hcmut.irms.kds_service.application.command.CreateTicketCommand;
 import com.hcmut.irms.kds_service.application.exception.TicketNotFoundException;
 import com.hcmut.irms.kds_service.application.mapper.KitchenTicketMapper;
-import com.hcmut.irms.kds_service.application.port.in.TicketWriteUseCase;
+import com.hcmut.irms.kds_service.application.port.in.ConfirmMenuAvailabilityUseCase;
+import com.hcmut.irms.kds_service.application.port.in.CreateTicketUseCase;
+import com.hcmut.irms.kds_service.application.port.in.UpdateTicketStatusUseCase;
 import com.hcmut.irms.kds_service.application.port.out.KdsWebSocketPublisher;
+import com.hcmut.irms.kds_service.application.port.out.KitchenTicketFinder;
+import com.hcmut.irms.kds_service.application.port.out.KitchenTicketSaver;
 import com.hcmut.irms.kds_service.application.port.out.OrderStatusPublisher;
 import com.hcmut.irms.kds_service.domain.model.KitchenTicket;
 import com.hcmut.irms.kds_service.domain.model.TicketStatus;
-import com.hcmut.irms.kds_service.domain.repository.KitchenTicketRepository;
-import com.hcmut.irms.kds_service.infrastructure.messaging.event.OrderCreatedEvent;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 
 @Service
-public class TicketWriteService implements TicketWriteUseCase {
-    private final KitchenTicketRepository repository;
+public class TicketWriteService implements CreateTicketUseCase, ConfirmMenuAvailabilityUseCase, UpdateTicketStatusUseCase {
+    private final KitchenTicketSaver ticketSaver;
+    private final KitchenTicketFinder ticketFinder;
     private final KdsWebSocketPublisher webSocketPublisher;
     private final OrderStatusPublisher orderStatusPublisher;
     private final KitchenTicketMapper ticketMapper;
     private final TicketStatusPolicy statusPolicy;
 
-    public TicketWriteService(KitchenTicketRepository repository, KdsWebSocketPublisher webSocketPublisher,
+    public TicketWriteService(KitchenTicketSaver ticketSaver, KitchenTicketFinder ticketFinder, KdsWebSocketPublisher webSocketPublisher,
                               OrderStatusPublisher orderStatusPublisher, KitchenTicketMapper ticketMapper,
                               TicketStatusPolicy statusPolicy) {
-        this.repository = repository;
+        this.ticketSaver = ticketSaver;
+        this.ticketFinder = ticketFinder;
         this.webSocketPublisher = webSocketPublisher;
         this.orderStatusPublisher = orderStatusPublisher;
         this.ticketMapper = ticketMapper;
@@ -33,27 +38,24 @@ public class TicketWriteService implements TicketWriteUseCase {
     }
 
     @Override
-    public void createTicketFromEvent(OrderCreatedEvent event) {
-        KitchenTicket saved = repository.save(ticketMapper.from(event));
+    public void createTicket(CreateTicketCommand command) {
+        KitchenTicket saved = ticketSaver.save(ticketMapper.from(command));
         webSocketPublisher.broadcastNewTicket(saved);
     }
 
     @Override
     public void confirmMenuAvailability(String ticketId, boolean isAvailable) {
-        KitchenTicket ticket = repository.findById(ticketId).orElseThrow(() -> new TicketNotFoundException(ticketId));
+        KitchenTicket ticket = ticketFinder.findById(ticketId).orElseThrow(() -> new TicketNotFoundException(ticketId));
         ticket.setStatus(isAvailable ? TicketStatus.KITCHEN_PENDING : TicketStatus.REJECT);
         ticket.setCompletedAt(isAvailable ? null : LocalDateTime.now(ZoneOffset.UTC));
 
-        KitchenTicket saved = repository.save(ticket);
+        KitchenTicket saved = ticketSaver.save(ticket);
         if (isAvailable) {
             webSocketPublisher.broadcastTicketUpdate(saved);
             return;
         }
         webSocketPublisher.broadcastTicketRemoval(saved.getId());
     }
-
-
-
 
     @Override
     public void updateOrderStatus(String ticketId, TicketStatus status) {
@@ -64,11 +66,11 @@ public class TicketWriteService implements TicketWriteUseCase {
             throw new IllegalArgumentException("Status must be COOKING, READY, or SERVED");
         }
 
-        KitchenTicket ticket = repository.findById(ticketId).orElseThrow(() -> new TicketNotFoundException(ticketId));
+        KitchenTicket ticket = ticketFinder.findById(ticketId).orElseThrow(() -> new TicketNotFoundException(ticketId));
         ticket.setStatus(status);
         ticket.setCompletedAt(status == TicketStatus.COOKING ? null : LocalDateTime.now(ZoneOffset.UTC));
 
-        KitchenTicket saved = repository.save(ticket);
+        KitchenTicket saved = ticketSaver.save(ticket);
         orderStatusPublisher.publishOrderStatusEvent(saved.getId(), status);
         if (statusPolicy.shouldStayOnActiveBoard(status)) {
             webSocketPublisher.broadcastTicketUpdate(saved);

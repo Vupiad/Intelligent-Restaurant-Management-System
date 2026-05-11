@@ -2,15 +2,15 @@ package com.hcmut.irms.ordering_service.controller;
 
 import com.hcmut.irms.ordering_service.dto.api.CreateOrderRequest;
 import com.hcmut.irms.ordering_service.dto.api.OrderResponse;
+import com.hcmut.irms.ordering_service.mapper.OrderApiMapper;
 import com.hcmut.irms.ordering_service.usecase.create.CreateOrderUseCase;
-import com.hcmut.irms.ordering_service.usecase.get.GetOrderUseCase;
+import com.hcmut.irms.ordering_service.usecase.get.GetOrderByIdUseCase;
+import com.hcmut.irms.ordering_service.usecase.get.ListOrdersUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
-import java.security.Principal;
 import java.util.List;
 
 /**
@@ -23,7 +23,9 @@ import java.util.List;
 public class OrderController {
 
     private final CreateOrderUseCase createOrderUseCase;
-    private final GetOrderUseCase getOrderUseCase;
+    private final GetOrderByIdUseCase getOrderByIdUseCase;
+    private final ListOrdersUseCase listOrdersUseCase;
+    private final OrderApiMapper apiMapper;
 
     /**
      * Create a new order.
@@ -31,12 +33,9 @@ public class OrderController {
      */
     @PostMapping
     public ResponseEntity<OrderResponse> createOrder(
-            @RequestBody CreateOrderRequest request,
-            Principal principal) {
+            @RequestBody CreateOrderRequest request) {
 
-        // Extract raw JWT token value to forward to menu-service
-        String bearerToken = extractToken(principal);
-        OrderResponse response = createOrderUseCase.createOrder(request, bearerToken);
+        OrderResponse response = apiMapper.toResponse(createOrderUseCase.createOrder(apiMapper.toCommand(request)));
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -46,7 +45,7 @@ public class OrderController {
      */
     @GetMapping("/{orderId}")
     public ResponseEntity<OrderResponse> getOrder(@PathVariable Long orderId) {
-        return ResponseEntity.ok(getOrderUseCase.getOrder(orderId));
+        return ResponseEntity.ok(apiMapper.toResponse(getOrderByIdUseCase.getOrder(orderId)));
     }
 
     /**
@@ -55,15 +54,9 @@ public class OrderController {
      */
     @GetMapping
     public ResponseEntity<List<OrderResponse>> getAllOrders() {
-        return ResponseEntity.ok(getOrderUseCase.getAllOrders());
+        return ResponseEntity.ok(listOrdersUseCase.getAllOrders().stream()
+                .map(apiMapper::toResponse)
+                .toList());
     }
 
-    // ─── Helper ──────────────────────────────────────────────────────────────
-
-    private String extractToken(Principal principal) {
-        if (principal instanceof JwtAuthenticationToken jwtAuth) {
-            return jwtAuth.getToken().getTokenValue();
-        }
-        return "";
-    }
 }

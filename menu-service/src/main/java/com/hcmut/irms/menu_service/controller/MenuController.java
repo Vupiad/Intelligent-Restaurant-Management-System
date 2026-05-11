@@ -3,8 +3,16 @@ package com.hcmut.irms.menu_service.controller;
 import com.hcmut.irms.menu_service.dto.MenuItemAvailabilityResponseDTO;
 import com.hcmut.irms.menu_service.dto.MenuItemRequestDTO;
 import com.hcmut.irms.menu_service.dto.MenuItemResponseDTO;
-import com.hcmut.irms.menu_service.usecase.MenuReadUseCase;
-import com.hcmut.irms.menu_service.usecase.MenuWriteUseCase;
+import com.hcmut.irms.menu_service.mapper.MenuApiMapper;
+import com.hcmut.irms.menu_service.usecase.ApplyMenuItemPromotionUseCase;
+import com.hcmut.irms.menu_service.usecase.CreateMenuItemUseCase;
+import com.hcmut.irms.menu_service.usecase.DeleteMenuItemUseCase;
+import com.hcmut.irms.menu_service.usecase.GetMenuItemAvailabilityUseCase;
+import com.hcmut.irms.menu_service.usecase.GetMenuItemUseCase;
+import com.hcmut.irms.menu_service.usecase.ListAvailableMenuItemsUseCase;
+import com.hcmut.irms.menu_service.usecase.ListMenuItemsUseCase;
+import com.hcmut.irms.menu_service.usecase.RemoveMenuItemPromotionUseCase;
+import com.hcmut.irms.menu_service.usecase.UpdateMenuItemUseCase;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -22,60 +30,89 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/menu")
 public class MenuController {
-    private final MenuReadUseCase readUseCase;
-    private final MenuWriteUseCase writeUseCase;
+    private final ListMenuItemsUseCase listMenuItemsUseCase;
+    private final ListAvailableMenuItemsUseCase listAvailableMenuItemsUseCase;
+    private final GetMenuItemUseCase getMenuItemUseCase;
+    private final GetMenuItemAvailabilityUseCase getMenuItemAvailabilityUseCase;
+    private final CreateMenuItemUseCase createMenuItemUseCase;
+    private final UpdateMenuItemUseCase updateMenuItemUseCase;
+    private final DeleteMenuItemUseCase deleteMenuItemUseCase;
+    private final ApplyMenuItemPromotionUseCase applyMenuItemPromotionUseCase;
+    private final RemoveMenuItemPromotionUseCase removeMenuItemPromotionUseCase;
+    private final MenuApiMapper apiMapper;
 
-    public MenuController(MenuReadUseCase readUseCase, MenuWriteUseCase writeUseCase) {
-        this.readUseCase = readUseCase;
-        this.writeUseCase = writeUseCase;
+    public MenuController(ListMenuItemsUseCase listMenuItemsUseCase,
+                          ListAvailableMenuItemsUseCase listAvailableMenuItemsUseCase,
+                          GetMenuItemUseCase getMenuItemUseCase,
+                          GetMenuItemAvailabilityUseCase getMenuItemAvailabilityUseCase,
+                          CreateMenuItemUseCase createMenuItemUseCase,
+                          UpdateMenuItemUseCase updateMenuItemUseCase,
+                          DeleteMenuItemUseCase deleteMenuItemUseCase,
+                          ApplyMenuItemPromotionUseCase applyMenuItemPromotionUseCase,
+                          RemoveMenuItemPromotionUseCase removeMenuItemPromotionUseCase,
+                          MenuApiMapper apiMapper) {
+        this.listMenuItemsUseCase = listMenuItemsUseCase;
+        this.listAvailableMenuItemsUseCase = listAvailableMenuItemsUseCase;
+        this.getMenuItemUseCase = getMenuItemUseCase;
+        this.getMenuItemAvailabilityUseCase = getMenuItemAvailabilityUseCase;
+        this.createMenuItemUseCase = createMenuItemUseCase;
+        this.updateMenuItemUseCase = updateMenuItemUseCase;
+        this.deleteMenuItemUseCase = deleteMenuItemUseCase;
+        this.applyMenuItemPromotionUseCase = applyMenuItemPromotionUseCase;
+        this.removeMenuItemPromotionUseCase = removeMenuItemPromotionUseCase;
+        this.apiMapper = apiMapper;
     }
 
     @GetMapping
     public List<MenuItemResponseDTO> getAllMenuItems() {
-        return readUseCase.getAllMenuItems();
+        return listMenuItemsUseCase.getAllMenuItems().stream()
+                .map(apiMapper::toResponse)
+                .toList();
     }
 
     @GetMapping("/available")
     public List<MenuItemResponseDTO> getMenu() {
-        return readUseCase.getAvailableMenu();
+        return listAvailableMenuItemsUseCase.getAvailableMenu().stream()
+                .map(apiMapper::toResponse)
+                .toList();
     }
 
     @GetMapping("/{itemId}")
     public MenuItemResponseDTO getMenuItem(@PathVariable UUID itemId) {
-        return readUseCase.getMenuItemById(itemId);
+        return apiMapper.toResponse(getMenuItemUseCase.getMenuItemById(itemId));
     }
 
     @GetMapping("/{itemId}/availability")
     public MenuItemAvailabilityResponseDTO getItemAvailability(@PathVariable UUID itemId) {
-        return readUseCase.getItemAvailability(itemId);
+        return apiMapper.toResponse(getMenuItemAvailabilityUseCase.getItemAvailability(itemId));
     }
 
     @PostMapping
     public ResponseEntity<MenuItemResponseDTO> createItem(@RequestBody MenuItemRequestDTO request) {
-        MenuItemResponseDTO created = writeUseCase.createItem(request);
+        MenuItemResponseDTO created = apiMapper.toResponse(createMenuItemUseCase.createItem(apiMapper.toCommand(request)));
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{itemId}")
     public MenuItemResponseDTO updateItem(@PathVariable UUID itemId, @RequestBody MenuItemRequestDTO request) {
-        return writeUseCase.updateItem(itemId, request);
+        return apiMapper.toResponse(updateMenuItemUseCase.updateItem(itemId, apiMapper.toCommand(request)));
     }
 
     @DeleteMapping("/{itemId}")
     public ResponseEntity<Void> deleteItem(@PathVariable UUID itemId) {
-        writeUseCase.deleteItem(itemId);
+        deleteMenuItemUseCase.deleteItem(itemId);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{itemId}/promotions/{promotionId}")
     public ResponseEntity<Void> applyPromo(@PathVariable UUID itemId, @PathVariable UUID promotionId) {
-        writeUseCase.applyPromotionToItem(itemId, promotionId);
+        applyMenuItemPromotionUseCase.applyPromotionToItem(itemId, promotionId);
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{itemId}/promotions/{promotionId}")
     public ResponseEntity<Void> removePromo(@PathVariable UUID itemId, @PathVariable UUID promotionId) {
-        writeUseCase.removePromotionFromItem(itemId, promotionId);
+        removeMenuItemPromotionUseCase.removePromotionFromItem(itemId, promotionId);
         return ResponseEntity.noContent().build();
     }
 }

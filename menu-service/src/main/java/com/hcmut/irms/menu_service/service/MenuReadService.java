@@ -1,62 +1,70 @@
 package com.hcmut.irms.menu_service.service;
 
-import com.hcmut.irms.menu_service.dto.MenuItemAvailabilityResponseDTO;
-import com.hcmut.irms.menu_service.dto.MenuItemResponseDTO;
+import com.hcmut.irms.menu_service.application.MenuItemAvailabilityView;
+import com.hcmut.irms.menu_service.application.MenuItemView;
+import com.hcmut.irms.menu_service.exception.MenuNotFoundException;
 import com.hcmut.irms.menu_service.mapper.MenuItemMapper;
 import com.hcmut.irms.menu_service.model.MenuItem;
-import com.hcmut.irms.menu_service.repository.MenuItemRepository;
-import com.hcmut.irms.menu_service.usecase.MenuReadUseCase;
-import org.springframework.http.HttpStatus;
+import com.hcmut.irms.menu_service.port.MenuItemPromotionReader;
+import com.hcmut.irms.menu_service.port.MenuItemReader;
+import com.hcmut.irms.menu_service.usecase.GetMenuItemAvailabilityUseCase;
+import com.hcmut.irms.menu_service.usecase.GetMenuItemUseCase;
+import com.hcmut.irms.menu_service.usecase.ListAvailableMenuItemsUseCase;
+import com.hcmut.irms.menu_service.usecase.ListMenuItemsUseCase;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 @Service
-public class MenuReadService implements MenuReadUseCase {
-    private final MenuItemRepository itemRepo;
+public class MenuReadService implements ListMenuItemsUseCase, ListAvailableMenuItemsUseCase,
+        GetMenuItemUseCase, GetMenuItemAvailabilityUseCase {
+    private final MenuItemPromotionReader itemPromotionReader;
+    private final MenuItemReader itemReader;
     private final MenuItemMapper menuItemMapper;
 
-    public MenuReadService(MenuItemRepository itemRepo, MenuItemMapper menuItemMapper) {
-        this.itemRepo = itemRepo;
+    public MenuReadService(MenuItemPromotionReader itemPromotionReader,
+                           MenuItemReader itemReader,
+                           MenuItemMapper menuItemMapper) {
+        this.itemPromotionReader = itemPromotionReader;
+        this.itemReader = itemReader;
         this.menuItemMapper = menuItemMapper;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<MenuItemResponseDTO> getAllMenuItems() {
+    public List<MenuItemView> getAllMenuItems() {
         LocalDateTime now = LocalDateTime.now();
-        return itemRepo.findAllWithPromotions().stream()
-                .map(item -> menuItemMapper.toResponse(item, now))
+        return itemPromotionReader.findAllWithPromotions().stream()
+                .map(item -> menuItemMapper.toView(item, now))
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<MenuItemResponseDTO> getAvailableMenu() {
+    public List<MenuItemView> getAvailableMenu() {
         LocalDateTime now = LocalDateTime.now();
-        return itemRepo.findAvailableWithPromotions().stream()
-                .map(item -> menuItemMapper.toResponse(item, now))
+        return itemPromotionReader.findAvailableWithPromotions().stream()
+                .map(item -> menuItemMapper.toView(item, now))
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public MenuItemResponseDTO getMenuItemById(UUID itemId) {
-        MenuItem item = itemRepo.findByIdWithPromotions(itemId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Menu item not found: " + itemId));
-        return menuItemMapper.toResponse(item, LocalDateTime.now());
+    public MenuItemView getMenuItemById(UUID itemId) {
+        MenuItem item = itemPromotionReader.findByIdWithPromotions(itemId)
+                .orElseThrow(() -> new MenuNotFoundException("Menu item not found: " + itemId));
+        return menuItemMapper.toView(item, LocalDateTime.now());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public MenuItemAvailabilityResponseDTO getItemAvailability(UUID itemId) {
-        MenuItem item = itemRepo.findById(itemId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Menu item not found: " + itemId));
+    public MenuItemAvailabilityView getItemAvailability(UUID itemId) {
+        MenuItem item = itemReader.findById(itemId)
+                .orElseThrow(() -> new MenuNotFoundException("Menu item not found: " + itemId));
 
-        return menuItemMapper.toAvailabilityResponse(item);
+        return menuItemMapper.toAvailabilityView(item);
     }
 }
