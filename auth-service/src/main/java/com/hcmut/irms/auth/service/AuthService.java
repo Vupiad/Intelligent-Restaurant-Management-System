@@ -6,22 +6,24 @@ import com.hcmut.irms.auth.exception.InvalidCredentialsException;
 import com.hcmut.irms.auth.exception.UsernameAlreadyTakenException;
 import com.hcmut.irms.auth.model.User;
 import com.hcmut.irms.auth.repository.UserRepository;
+import com.hcmut.irms.auth.usecase.AuthUseCase;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
-public class AuthService {
+public class AuthService implements AuthUseCase {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
+    private final TokenProvider tokenProvider;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, TokenProvider tokenProvider) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        this.jwtService = jwtService;
+        this.tokenProvider = tokenProvider;
     }
 
+    @Override
     public String login(AuthRequest request) {
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(InvalidCredentialsException::new);
@@ -30,9 +32,10 @@ public class AuthService {
             throw new InvalidCredentialsException();
         }
 
-        return jwtService.generateToken(user.getUsername(), user.getRole().name());
+        return tokenProvider.generateToken(user.getUsername(), user.getRole().name());
     }
 
+    @Override
     public void register(RegisterRequest request) {
         if (userRepository.findByUsername(request.getUsername()).isPresent()) {
             throw new UsernameAlreadyTakenException();

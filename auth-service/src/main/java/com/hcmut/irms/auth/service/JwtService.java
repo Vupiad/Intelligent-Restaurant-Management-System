@@ -9,7 +9,7 @@ import java.security.KeyPair;
 import java.util.Date;
 
 @Service
-public class JwtService {
+public class JwtService implements TokenProvider {
 
     private final KeyPair keyPair;
 
@@ -18,6 +18,7 @@ public class JwtService {
         this.keyPair = keyPair;
     }
 
+    @Override
     public String generateToken(String username, String role) {
         return Jwts.builder()
                 .claim("role", role)
@@ -36,10 +37,12 @@ public class JwtService {
                 .getBody();
     }
 
+    @Override
     public String extractUsername(String token) {
         return extractAllClaims(token).getSubject();
     }
 
+    @Override
     public String extractRole(String token) {
         return extractAllClaims(token).get("role", String.class);
     }

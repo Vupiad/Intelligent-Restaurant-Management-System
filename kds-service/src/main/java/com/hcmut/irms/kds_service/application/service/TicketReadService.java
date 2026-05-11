@@ -11,14 +11,16 @@ import java.util.List;
 @Service
 public class TicketReadService implements TicketReadUseCase {
     private final KitchenTicketRepository repository;
+    private final TicketStatusPolicy statusPolicy;
 
-    public TicketReadService(KitchenTicketRepository repository) {
+    public TicketReadService(KitchenTicketRepository repository, TicketStatusPolicy statusPolicy) {
         this.repository = repository;
+        this.statusPolicy = statusPolicy;
     }
 
     @Override
     public List<KitchenTicket> getActiveTickets() {
-        return repository.findByStatusNotIn(List.of(TicketStatus.WAIT_FOR_MENU_CONFIRM,TicketStatus.REJECT, TicketStatus.READY, TicketStatus.SERVED));
+        return repository.findByStatusNotIn(statusPolicy.inactiveStatuses());
     }
 
     @Override

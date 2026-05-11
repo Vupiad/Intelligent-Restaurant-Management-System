@@ -1,6 +1,7 @@
 package com.hcmut.irms.menu_service.service;
 
 import com.hcmut.irms.menu_service.dto.MenuItemAvailabilityResponseDTO;
+import com.hcmut.irms.menu_service.mapper.MenuItemMapper;
 import com.hcmut.irms.menu_service.model.MenuItem;
 import com.hcmut.irms.menu_service.repository.MenuItemRepository;
 import org.junit.jupiter.api.Test;
@@ -33,7 +34,10 @@ class MenuReadServiceTests {
         item.setAvailable(true);
         when(menuItemRepository.findById(itemId)).thenReturn(Optional.of(item));
 
-        MenuReadService service = new MenuReadService(menuItemRepository, priceCalculationService);
+        MenuReadService service = new MenuReadService(
+                menuItemRepository,
+                new MenuItemMapper(priceCalculationService)
+        );
         MenuItemAvailabilityResponseDTO response = service.getItemAvailability(itemId);
 
         assertThat(response.getItemId()).isEqualTo(itemId);
@@ -45,7 +49,10 @@ class MenuReadServiceTests {
         UUID itemId = UUID.randomUUID();
         when(menuItemRepository.findById(itemId)).thenReturn(Optional.empty());
 
-        MenuReadService service = new MenuReadService(menuItemRepository, priceCalculationService);
+        MenuReadService service = new MenuReadService(
+                menuItemRepository,
+                new MenuItemMapper(priceCalculationService)
+        );
 
         assertThatThrownBy(() -> service.getItemAvailability(itemId))
                 .isInstanceOf(ResponseStatusException.class)

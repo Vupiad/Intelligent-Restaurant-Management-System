@@ -2,6 +2,7 @@ package com.hcmut.irms.kds_service.application.service;
 
 import com.hcmut.irms.kds_service.application.port.out.KdsWebSocketPublisher;
 import com.hcmut.irms.kds_service.application.port.out.OrderStatusPublisher;
+import com.hcmut.irms.kds_service.application.mapper.KitchenTicketMapper;
 import com.hcmut.irms.kds_service.domain.model.KitchenTicket;
 import com.hcmut.irms.kds_service.domain.model.TicketItem;
 import com.hcmut.irms.kds_service.domain.model.TicketStatus;
@@ -59,7 +60,13 @@ class TicketWriteServiceTests {
             throw new UnsupportedOperationException("Not used in this test");
         };
 
-        TicketWriteService service = new TicketWriteService(repository, webSocketPublisher, orderStatusPublisher);
+        TicketWriteService service = new TicketWriteService(
+                repository,
+                webSocketPublisher,
+                orderStatusPublisher,
+                new KitchenTicketMapper(),
+                new TicketStatusPolicy()
+        );
         OrderCreatedEvent event = new OrderCreatedEvent(
                 "evt-1",
                 "order-1",

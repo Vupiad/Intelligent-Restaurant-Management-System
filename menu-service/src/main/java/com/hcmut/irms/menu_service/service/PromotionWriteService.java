@@ -2,11 +2,13 @@ package com.hcmut.irms.menu_service.service;
 
 import com.hcmut.irms.menu_service.dto.PromotionRequestDTO;
 import com.hcmut.irms.menu_service.dto.PromotionResponseDTO;
+import com.hcmut.irms.menu_service.mapper.PromotionMapper;
 import com.hcmut.irms.menu_service.model.MenuItem;
 import com.hcmut.irms.menu_service.model.Promotion;
 import com.hcmut.irms.menu_service.repository.MenuItemRepository;
 import com.hcmut.irms.menu_service.repository.PromotionRepository;
 import com.hcmut.irms.menu_service.usecase.PromotionWriteUseCase;
+import com.hcmut.irms.menu_service.validation.PromotionRequestValidator;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,32 +21,39 @@ import java.util.UUID;
 public class PromotionWriteService implements PromotionWriteUseCase {
     private final MenuItemRepository itemRepo;
     private final PromotionRepository promoRepo;
+    private final PromotionRequestValidator requestValidator;
+    private final PromotionMapper promotionMapper;
 
-    public PromotionWriteService(MenuItemRepository itemRepo, PromotionRepository promoRepo) {
+    public PromotionWriteService(MenuItemRepository itemRepo,
+                                 PromotionRepository promoRepo,
+                                 PromotionRequestValidator requestValidator,
+                                 PromotionMapper promotionMapper) {
         this.itemRepo = itemRepo;
         this.promoRepo = promoRepo;
+        this.requestValidator = requestValidator;
+        this.promotionMapper = promotionMapper;
     }
 
     @Override
     @Transactional
     public PromotionResponseDTO createPromotion(PromotionRequestDTO request) {
-        validateRequest(request);
+        requestValidator.validate(request);
         if (promoRepo.findByName(request.getName()).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Promotion name already exists: " + request.getName());
         }
 
         Promotion promotion = new Promotion();
-        applyRequestToPromotion(promotion, request);
+        promotionMapper.applyToPromotion(promotion, request);
         promotion.setActive(true);
 
         Promotion saved = promoRepo.save(promotion);
-        return toResponse(saved);
+        return promotionMapper.toResponse(saved);
     }
 
     @Override
     @Transactional
     public PromotionResponseDTO updatePromotion(UUID promotionId, PromotionRequestDTO request) {
-        validateRequest(request);
+        requestValidator.validate(request);
         Promotion existing = promoRepo.findById(promotionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Promotion not found: " + promotionId));
 
@@ -52,9 +61,9 @@ public class PromotionWriteService implements PromotionWriteUseCase {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Promotion name already exists: " + request.getName());
         }
 
-        applyRequestToPromotion(existing, request);
+        promotionMapper.applyToPromotion(existing, request);
         Promotion updated = promoRepo.save(existing);
-        return toResponse(updated);
+        return promotionMapper.toResponse(updated);
     }
 
     @Override
@@ -71,44 +80,4 @@ public class PromotionWriteService implements PromotionWriteUseCase {
         promoRepo.delete(existing);
     }
 
-    private void validateRequest(PromotionRequestDTO request) {
-        if (request.getName() == null || request.getName().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "name is required");
-        }
-        if (request.getType() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "type is required");
-        }
-        if (request.getDiscountValue() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "discountValue is required");
-        }
-        if (request.getDiscountValue().signum() < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "discountValue must be non-negative");
-        }
-        if (request.getStartTime() == null || request.getEndTime() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "startTime and endTime are required");
-        }
-        if (!request.getEndTime().isAfter(request.getStartTime())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "endTime must be after startTime");
-        }
-    }
-
-    private void applyRequestToPromotion(Promotion promotion, PromotionRequestDTO request) {
-        promotion.setName(request.getName());
-        promotion.setType(request.getType());
-        promotion.setDiscountValue(request.getDiscountValue());
-        promotion.setStartTime(request.getStartTime());
-        promotion.setEndTime(request.getEndTime());
-    }
-
-    private PromotionResponseDTO toResponse(Promotion promotion) {
-        PromotionResponseDTO response = new PromotionResponseDTO();
-        response.setId(promotion.getId());
-        response.setName(promotion.getName());
-        response.setType(promotion.getType());
-        response.setDiscountValue(promotion.getDiscountValue());
-        response.setStartTime(promotion.getStartTime());
-        response.setEndTime(promotion.getEndTime());
-        response.setActive(promotion.isActive());
-        return response;
-    }
 }

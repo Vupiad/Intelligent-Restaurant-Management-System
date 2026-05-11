@@ -1,6 +1,7 @@
 package com.hcmut.irms.menu_service.service;
 
 import com.hcmut.irms.menu_service.dto.PromotionResponseDTO;
+import com.hcmut.irms.menu_service.mapper.PromotionMapper;
 import com.hcmut.irms.menu_service.model.Promotion;
 import com.hcmut.irms.menu_service.repository.PromotionRepository;
 import com.hcmut.irms.menu_service.usecase.PromotionReadUseCase;
@@ -15,16 +16,18 @@ import java.util.UUID;
 @Service
 public class PromotionReadService implements PromotionReadUseCase {
     private final PromotionRepository promoRepo;
+    private final PromotionMapper promotionMapper;
 
-    public PromotionReadService(PromotionRepository promoRepo) {
+    public PromotionReadService(PromotionRepository promoRepo, PromotionMapper promotionMapper) {
         this.promoRepo = promoRepo;
+        this.promotionMapper = promotionMapper;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<PromotionResponseDTO> getAllPromotions() {
         return promoRepo.findAll().stream()
-                .map(this::toResponse)
+                .map(promotionMapper::toResponse)
                 .toList();
     }
 
@@ -32,7 +35,7 @@ public class PromotionReadService implements PromotionReadUseCase {
     @Transactional(readOnly = true)
     public List<PromotionResponseDTO> getActivePromotions() {
         return promoRepo.findActivePromotions().stream()
-                .map(this::toResponse)
+                .map(promotionMapper::toResponse)
                 .toList();
     }
 
@@ -41,18 +44,6 @@ public class PromotionReadService implements PromotionReadUseCase {
     public PromotionResponseDTO getPromotionById(UUID promotionId) {
         Promotion promotion = promoRepo.findById(promotionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Promotion not found: " + promotionId));
-        return toResponse(promotion);
-    }
-
-    private PromotionResponseDTO toResponse(Promotion promotion) {
-        PromotionResponseDTO response = new PromotionResponseDTO();
-        response.setId(promotion.getId());
-        response.setName(promotion.getName());
-        response.setType(promotion.getType());
-        response.setDiscountValue(promotion.getDiscountValue());
-        response.setStartTime(promotion.getStartTime());
-        response.setEndTime(promotion.getEndTime());
-        response.setActive(promotion.isActive());
-        return response;
+        return promotionMapper.toResponse(promotion);
     }
 }

@@ -1,6 +1,7 @@
 package com.hcmut.irms.menu_service.service;
 
 import com.hcmut.irms.menu_service.dto.CategoryResponseDTO;
+import com.hcmut.irms.menu_service.mapper.CategoryMapper;
 import com.hcmut.irms.menu_service.model.Category;
 import com.hcmut.irms.menu_service.repository.CategoryRepository;
 import com.hcmut.irms.menu_service.usecase.CategoryReadUseCase;
@@ -15,16 +16,18 @@ import java.util.UUID;
 @Service
 public class CategoryReadService implements CategoryReadUseCase {
     private final CategoryRepository categoryRepo;
+    private final CategoryMapper categoryMapper;
 
-    public CategoryReadService(CategoryRepository categoryRepo) {
+    public CategoryReadService(CategoryRepository categoryRepo, CategoryMapper categoryMapper) {
         this.categoryRepo = categoryRepo;
+        this.categoryMapper = categoryMapper;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CategoryResponseDTO> getAllCategories() {
         return categoryRepo.findAll().stream()
-                .map(this::toResponse)
+                .map(categoryMapper::toResponse)
                 .toList();
     }
 
@@ -33,15 +36,6 @@ public class CategoryReadService implements CategoryReadUseCase {
     public CategoryResponseDTO getCategoryById(UUID categoryId) {
         Category category = categoryRepo.findById(categoryId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found: " + categoryId));
-        return toResponse(category);
-    }
-
-    private CategoryResponseDTO toResponse(Category category) {
-        CategoryResponseDTO response = new CategoryResponseDTO();
-        response.setId(category.getId());
-        response.setName(category.getName());
-        response.setDescription(category.getDescription());
-        response.setActive(category.isActive());
-        return response;
+        return categoryMapper.toResponse(category);
     }
 }

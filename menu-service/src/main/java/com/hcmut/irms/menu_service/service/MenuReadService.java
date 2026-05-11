@@ -2,8 +2,8 @@ package com.hcmut.irms.menu_service.service;
 
 import com.hcmut.irms.menu_service.dto.MenuItemAvailabilityResponseDTO;
 import com.hcmut.irms.menu_service.dto.MenuItemResponseDTO;
+import com.hcmut.irms.menu_service.mapper.MenuItemMapper;
 import com.hcmut.irms.menu_service.model.MenuItem;
-import com.hcmut.irms.menu_service.model.Promotion;
 import com.hcmut.irms.menu_service.repository.MenuItemRepository;
 import com.hcmut.irms.menu_service.usecase.MenuReadUseCase;
 import org.springframework.http.HttpStatus;
@@ -18,11 +18,11 @@ import java.util.UUID;
 @Service
 public class MenuReadService implements MenuReadUseCase {
     private final MenuItemRepository itemRepo;
-    private final PriceCalculationService priceService;
+    private final MenuItemMapper menuItemMapper;
 
-    public MenuReadService(MenuItemRepository itemRepo, PriceCalculationService priceService) {
+    public MenuReadService(MenuItemRepository itemRepo, MenuItemMapper menuItemMapper) {
         this.itemRepo = itemRepo;
-        this.priceService = priceService;
+        this.menuItemMapper = menuItemMapper;
     }
 
     @Override
@@ -30,7 +30,7 @@ public class MenuReadService implements MenuReadUseCase {
     public List<MenuItemResponseDTO> getAllMenuItems() {
         LocalDateTime now = LocalDateTime.now();
         return itemRepo.findAllWithPromotions().stream()
-                .map(item -> toResponse(item, now))
+                .map(item -> menuItemMapper.toResponse(item, now))
                 .toList();
     }
 
@@ -39,7 +39,7 @@ public class MenuReadService implements MenuReadUseCase {
     public List<MenuItemResponseDTO> getAvailableMenu() {
         LocalDateTime now = LocalDateTime.now();
         return itemRepo.findAvailableWithPromotions().stream()
-                .map(item -> toResponse(item, now))
+                .map(item -> menuItemMapper.toResponse(item, now))
                 .toList();
     }
 
@@ -48,7 +48,7 @@ public class MenuReadService implements MenuReadUseCase {
     public MenuItemResponseDTO getMenuItemById(UUID itemId) {
         MenuItem item = itemRepo.findByIdWithPromotions(itemId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Menu item not found: " + itemId));
-        return toResponse(item, LocalDateTime.now());
+        return menuItemMapper.toResponse(item, LocalDateTime.now());
     }
 
     @Override
@@ -57,28 +57,6 @@ public class MenuReadService implements MenuReadUseCase {
         MenuItem item = itemRepo.findById(itemId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Menu item not found: " + itemId));
 
-        MenuItemAvailabilityResponseDTO response = new MenuItemAvailabilityResponseDTO();
-        response.setItemId(item.getId());
-        response.setAvailableForOrder(item.isAvailable());
-        return response;
-    }
-
-    private MenuItemResponseDTO toResponse(MenuItem item, LocalDateTime now) {
-        List<String> activePromotionNames = priceService.getActivePromotions(item, now).stream()
-                .map(Promotion::getName)
-                .toList();
-
-        MenuItemResponseDTO response = new MenuItemResponseDTO();
-        response.setId(item.getId());
-        response.setCategoryId(item.getCategory().getId());
-        response.setName(item.getName());
-        response.setDescription(item.getDescription());
-        response.setOriginalPrice(item.getBasePrice());
-        response.setFinalCalculatedPrice(priceService.calculateFinalPrice(item, now));
-        response.setAvailable(item.isAvailable());
-        response.setImageUrl(item.getImageUrl());
-        response.setCustomizations(item.getCustomizations());
-        response.setActivePromotions(activePromotionNames);
-        return response;
+        return menuItemMapper.toAvailabilityResponse(item);
     }
 }

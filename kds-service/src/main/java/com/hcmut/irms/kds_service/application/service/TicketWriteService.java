@@ -1,46 +1,41 @@
 package com.hcmut.irms.kds_service.application.service;
 
 import com.hcmut.irms.kds_service.application.exception.TicketNotFoundException;
+import com.hcmut.irms.kds_service.application.mapper.KitchenTicketMapper;
 import com.hcmut.irms.kds_service.application.port.in.TicketWriteUseCase;
 import com.hcmut.irms.kds_service.application.port.out.KdsWebSocketPublisher;
 import com.hcmut.irms.kds_service.application.port.out.OrderStatusPublisher;
 import com.hcmut.irms.kds_service.domain.model.KitchenTicket;
-import com.hcmut.irms.kds_service.domain.model.TicketItem;
 import com.hcmut.irms.kds_service.domain.model.TicketStatus;
 import com.hcmut.irms.kds_service.domain.repository.KitchenTicketRepository;
 import com.hcmut.irms.kds_service.infrastructure.messaging.event.OrderCreatedEvent;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.EnumSet;
-import java.util.List;
 
 @Service
 public class TicketWriteService implements TicketWriteUseCase {
     private final KitchenTicketRepository repository;
     private final KdsWebSocketPublisher webSocketPublisher;
     private final OrderStatusPublisher orderStatusPublisher;
+    private final KitchenTicketMapper ticketMapper;
+    private final TicketStatusPolicy statusPolicy;
 
     public TicketWriteService(KitchenTicketRepository repository, KdsWebSocketPublisher webSocketPublisher,
-                              OrderStatusPublisher orderStatusPublisher) {
+                              OrderStatusPublisher orderStatusPublisher, KitchenTicketMapper ticketMapper,
+                              TicketStatusPolicy statusPolicy) {
         this.repository = repository;
         this.webSocketPublisher = webSocketPublisher;
         this.orderStatusPublisher = orderStatusPublisher;
+        this.ticketMapper = ticketMapper;
+        this.statusPolicy = statusPolicy;
     }
 
     @Override
     public void createTicketFromEvent(OrderCreatedEvent event) {
-        KitchenTicket ticket = new KitchenTicket();
-        ticket.setId(event.orderId());
-        ticket.setTableNumber(event.tableNumber());
-        ticket.setWaiterId(event.waiterId());
-        ticket.setStatus(TicketStatus.WAIT_FOR_MENU_CONFIRM);
-        ticket.setReceivedAt(parseTimestamp(event.timestamp()));
-        ticket.setCompletedAt(null);
-        ticket.setItems(toTicketItems(event.items()));
-        repository.save(ticket);
+        KitchenTicket saved = repository.save(ticketMapper.from(event));
+        webSocketPublisher.broadcastNewTicket(saved);
     }
 
     @Override
@@ -65,7 +60,7 @@ public class TicketWriteService implements TicketWriteUseCase {
         if (status == null) {
             throw new IllegalArgumentException("Status is required");
         }
-        if (!EnumSet.of(TicketStatus.COOKING, TicketStatus.READY, TicketStatus.SERVED).contains(status)) {
+        if (!statusPolicy.canBeUpdatedByKitchen(status)) {
             throw new IllegalArgumentException("Status must be COOKING, READY, or SERVED");
         }
 
@@ -75,27 +70,11 @@ public class TicketWriteService implements TicketWriteUseCase {
 
         KitchenTicket saved = repository.save(ticket);
         orderStatusPublisher.publishOrderStatusEvent(saved.getId(), status);
-        if (status == TicketStatus.COOKING) {
+        if (statusPolicy.shouldStayOnActiveBoard(status)) {
             webSocketPublisher.broadcastTicketUpdate(saved);
             return;
         }
         webSocketPublisher.broadcastTicketRemoval(saved.getId());
-    }
-
-    private List<TicketItem> toTicketItems(List<OrderCreatedEvent.OrderItemPayload> items) {
-        if (items == null) {
-            return List.of();
-        }
-        return items.stream()
-                .map(i -> new TicketItem(i.menuItemId(), i.itemName(), i.quantity(), i.customizations(), i.notes()))
-                .toList();
-    }
-
-    private LocalDateTime parseTimestamp(String timestamp) {
-        if (timestamp == null || timestamp.isBlank()) {
-            return LocalDateTime.now(ZoneOffset.UTC);
-        }
-        return OffsetDateTime.parse(timestamp).withOffsetSameInstant(ZoneOffset.UTC).toLocalDateTime();
     }
 
 }

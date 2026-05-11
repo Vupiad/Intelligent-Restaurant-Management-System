@@ -1,10 +1,10 @@
 package com.hcmut.irms.ordering_service.usecase.update;
 
-import com.hcmut.irms.ordering_service.adapter.messaging.OrderStatusWebSocketPublisher;
 import com.hcmut.irms.ordering_service.domain.Order;
 import com.hcmut.irms.ordering_service.domain.OrderStatus;
 import com.hcmut.irms.ordering_service.domain.exception.OrderNotFoundException;
 import com.hcmut.irms.ordering_service.port.OrderRepositoryPort;
+import com.hcmut.irms.ordering_service.port.OrderStatusNotificationPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,29 +16,19 @@ import org.springframework.transaction.annotation.Transactional;
 public class UpdateOrderStatusService implements UpdateOrderStatusUseCase {
 
     private final OrderRepositoryPort orderRepositoryPort;
-    private final OrderStatusWebSocketPublisher orderStatusWebSocketPublisher;
+    private final OrderStatusNotificationPort orderStatusNotificationPort;
 
     @Override
     @Transactional
-    public void updateStatus(String orderId, String newStatus) {
-        Long id;
-        try {
-            id = Long.parseLong(orderId);
-        } catch (NumberFormatException e) {
-            log.warn("Received invalid orderId from KDS: '{}' — ignoring event", orderId);
-            return;
-        }
-
-        Order order = orderRepositoryPort.findById(id)
-                .orElseThrow(() -> new OrderNotFoundException(id));
-
-        OrderStatus targetStatus = OrderStatus.fromString(newStatus);
+    public void updateStatus(Long orderId, OrderStatus newStatus) {
+        Order order = orderRepositoryPort.findById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException(orderId));
 
         // Domain enforces the valid transition rule
-        order.applyStatusTransition(targetStatus);
+        order.applyStatusTransition(newStatus);
 
         orderRepositoryPort.save(order);
-        orderStatusWebSocketPublisher.publish(String.valueOf(id), targetStatus.name());
-        log.info("Order {} status updated to {}", id, targetStatus);
+        orderStatusNotificationPort.publish(String.valueOf(orderId), newStatus.name());
+        log.info("Order {} status updated to {}", orderId, newStatus);
     }
 }
