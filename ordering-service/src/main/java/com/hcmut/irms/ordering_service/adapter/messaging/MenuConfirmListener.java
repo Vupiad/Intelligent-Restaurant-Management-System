@@ -17,8 +17,9 @@ public class MenuConfirmListener {
 
     @RabbitListener(queues = "${app.rabbitmq.menu-confirm-queue:order.menu.confirm}")
     public void onMenuConfirm(MenuConfirmEvent event) {
+        Long orderId;
         try {
-            Long.parseLong(event.orderId());
+            orderId = Long.parseLong(event.orderId());
         } catch (NumberFormatException e) {
             log.warn("Received invalid orderId from menu confirmation: '{}' — ignoring event", event.orderId());
             return;
@@ -30,6 +31,6 @@ public class MenuConfirmListener {
         log.info("Received menu confirm event: orderId={} isAvailable={} -> status={}",
                 event.orderId(), event.isAvailable(), status);
 
-        updateOrderStatusUseCase.updateStatus(event.orderId(), status);
+        updateOrderStatusUseCase.updateStatus(orderId, targetStatus);
     }
 }

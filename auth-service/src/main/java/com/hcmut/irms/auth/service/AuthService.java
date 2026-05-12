@@ -1,50 +1,54 @@
 package com.hcmut.irms.auth.service;
 
-import com.hcmut.irms.auth.dto.AuthRequest;
-import com.hcmut.irms.auth.dto.RegisterRequest;
 import com.hcmut.irms.auth.exception.InvalidCredentialsException;
 import com.hcmut.irms.auth.exception.UsernameAlreadyTakenException;
 import com.hcmut.irms.auth.model.User;
-import com.hcmut.irms.auth.repository.UserRepository;
+import com.hcmut.irms.auth.port.UserAccountStore;
+import com.hcmut.irms.auth.usecase.LoginCommand;
+import com.hcmut.irms.auth.usecase.LoginUseCase;
+import com.hcmut.irms.auth.usecase.RegisterCommand;
+import com.hcmut.irms.auth.usecase.RegisterUseCase;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
-public class AuthService {
+public class AuthService implements LoginUseCase, RegisterUseCase {
 
-    private final UserRepository userRepository;
+    private final UserAccountStore userAccountStore;
     private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
+    private final TokenProvider tokenProvider;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
-        this.userRepository = userRepository;
+    public AuthService(UserAccountStore userAccountStore, PasswordEncoder passwordEncoder, TokenProvider tokenProvider) {
+        this.userAccountStore = userAccountStore;
         this.passwordEncoder = passwordEncoder;
-        this.jwtService = jwtService;
+        this.tokenProvider = tokenProvider;
     }
 
-    public String login(AuthRequest request) {
-        User user = userRepository.findByUsername(request.getUsername())
+    @Override
+    public String login(LoginCommand command) {
+        User user = userAccountStore.findByUsername(command.username())
                 .orElseThrow(InvalidCredentialsException::new);
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+        if (!passwordEncoder.matches(command.password(), user.getPassword())) {
             throw new InvalidCredentialsException();
         }
 
-        return jwtService.generateToken(user.getUsername(), user.getRole().name());
+        return tokenProvider.generateToken(user.getUsername(), user.getRole().name());
     }
 
-    public void register(RegisterRequest request) {
-        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
+    @Override
+    public void register(RegisterCommand command) {
+        if (userAccountStore.findByUsername(command.username()).isPresent()) {
             throw new UsernameAlreadyTakenException();
         }
 
-        String hashedPassword = passwordEncoder.encode(request.getPassword());
+        String hashedPassword = passwordEncoder.encode(command.password());
 
         User newUser = new User(
-                request.getUsername(),
+                command.username(),
                 hashedPassword,
-                request.getRole()
+                command.role()
         );
-        userRepository.save(newUser);
+        userAccountStore.save(newUser);
     }
 }

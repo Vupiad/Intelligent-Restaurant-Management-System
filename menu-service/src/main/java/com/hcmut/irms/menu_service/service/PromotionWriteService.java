@@ -1,114 +1,97 @@
 package com.hcmut.irms.menu_service.service;
 
-import com.hcmut.irms.menu_service.dto.PromotionRequestDTO;
-import com.hcmut.irms.menu_service.dto.PromotionResponseDTO;
+import com.hcmut.irms.menu_service.application.PromotionCommand;
+import com.hcmut.irms.menu_service.application.PromotionView;
+import com.hcmut.irms.menu_service.exception.MenuConflictException;
+import com.hcmut.irms.menu_service.exception.MenuNotFoundException;
+import com.hcmut.irms.menu_service.mapper.PromotionMapper;
 import com.hcmut.irms.menu_service.model.MenuItem;
 import com.hcmut.irms.menu_service.model.Promotion;
-import com.hcmut.irms.menu_service.repository.MenuItemRepository;
-import com.hcmut.irms.menu_service.repository.PromotionRepository;
-import com.hcmut.irms.menu_service.usecase.PromotionWriteUseCase;
-import org.springframework.http.HttpStatus;
+import com.hcmut.irms.menu_service.port.MenuItemWriter;
+import com.hcmut.irms.menu_service.port.PromotionMenuItemLinkReader;
+import com.hcmut.irms.menu_service.port.PromotionNameChecker;
+import com.hcmut.irms.menu_service.port.PromotionReader;
+import com.hcmut.irms.menu_service.port.PromotionWriter;
+import com.hcmut.irms.menu_service.usecase.CreatePromotionUseCase;
+import com.hcmut.irms.menu_service.usecase.DeletePromotionUseCase;
+import com.hcmut.irms.menu_service.usecase.UpdatePromotionUseCase;
+import com.hcmut.irms.menu_service.validation.PromotionRequestValidator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.UUID;
 
 @Service
-public class PromotionWriteService implements PromotionWriteUseCase {
-    private final MenuItemRepository itemRepo;
-    private final PromotionRepository promoRepo;
+public class PromotionWriteService implements CreatePromotionUseCase, UpdatePromotionUseCase, DeletePromotionUseCase {
+    private final PromotionMenuItemLinkReader promotionMenuItemLinkReader;
+    private final MenuItemWriter itemWriter;
+    private final PromotionReader promotionReader;
+    private final PromotionNameChecker promotionNameChecker;
+    private final PromotionWriter promotionWriter;
+    private final PromotionRequestValidator requestValidator;
+    private final PromotionMapper promotionMapper;
 
-    public PromotionWriteService(MenuItemRepository itemRepo, PromotionRepository promoRepo) {
-        this.itemRepo = itemRepo;
-        this.promoRepo = promoRepo;
+    public PromotionWriteService(PromotionMenuItemLinkReader promotionMenuItemLinkReader,
+                                 MenuItemWriter itemWriter,
+                                 PromotionReader promotionReader,
+                                 PromotionNameChecker promotionNameChecker,
+                                 PromotionWriter promotionWriter,
+                                 PromotionRequestValidator requestValidator,
+                                 PromotionMapper promotionMapper) {
+        this.promotionMenuItemLinkReader = promotionMenuItemLinkReader;
+        this.itemWriter = itemWriter;
+        this.promotionReader = promotionReader;
+        this.promotionNameChecker = promotionNameChecker;
+        this.promotionWriter = promotionWriter;
+        this.requestValidator = requestValidator;
+        this.promotionMapper = promotionMapper;
     }
 
     @Override
     @Transactional
-    public PromotionResponseDTO createPromotion(PromotionRequestDTO request) {
-        validateRequest(request);
-        if (promoRepo.findByName(request.getName()).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Promotion name already exists: " + request.getName());
+    public PromotionView createPromotion(PromotionCommand command) {
+        requestValidator.validate(command);
+        if (promotionNameChecker.findByName(command.name()).isPresent()) {
+            throw new MenuConflictException("Promotion name already exists: " + command.name());
         }
 
         Promotion promotion = new Promotion();
-        applyRequestToPromotion(promotion, request);
+        promotionMapper.applyToPromotion(promotion, command);
         promotion.setActive(true);
 
-        Promotion saved = promoRepo.save(promotion);
-        return toResponse(saved);
+        Promotion saved = promotionWriter.save(promotion);
+        return promotionMapper.toView(saved);
     }
 
     @Override
     @Transactional
-    public PromotionResponseDTO updatePromotion(UUID promotionId, PromotionRequestDTO request) {
-        validateRequest(request);
-        Promotion existing = promoRepo.findById(promotionId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Promotion not found: " + promotionId));
+    public PromotionView updatePromotion(UUID promotionId, PromotionCommand command) {
+        requestValidator.validate(command);
+        Promotion existing = promotionReader.findById(promotionId)
+                .orElseThrow(() -> new MenuNotFoundException("Promotion not found: " + promotionId));
 
-        if (promoRepo.existsByNameAndIdNot(request.getName(), promotionId)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Promotion name already exists: " + request.getName());
+        if (promotionNameChecker.existsByNameAndIdNot(command.name(), promotionId)) {
+            throw new MenuConflictException("Promotion name already exists: " + command.name());
         }
 
-        applyRequestToPromotion(existing, request);
-        Promotion updated = promoRepo.save(existing);
-        return toResponse(updated);
+        promotionMapper.applyToPromotion(existing, command);
+        Promotion updated = promotionWriter.save(existing);
+        return promotionMapper.toView(updated);
     }
 
     @Override
     @Transactional
     public void deletePromotion(UUID promotionId) {
-        Promotion existing = promoRepo.findById(promotionId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Promotion not found: " + promotionId));
+        Promotion existing = promotionReader.findById(promotionId)
+                .orElseThrow(() -> new MenuNotFoundException("Promotion not found: " + promotionId));
 
-        List<MenuItem> linkedItems = itemRepo.findByPromotions_Id(promotionId);
+        List<MenuItem> linkedItems = promotionMenuItemLinkReader.findByPromotions_Id(promotionId);
         for (MenuItem item : linkedItems) {
             item.getPromotions().removeIf(promotion -> promotion.getId().equals(promotionId));
+            itemWriter.save(item);
         }
-        itemRepo.saveAll(linkedItems);
-        promoRepo.delete(existing);
+        promotionWriter.delete(existing);
     }
 
-    private void validateRequest(PromotionRequestDTO request) {
-        if (request.getName() == null || request.getName().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "name is required");
-        }
-        if (request.getType() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "type is required");
-        }
-        if (request.getDiscountValue() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "discountValue is required");
-        }
-        if (request.getDiscountValue().signum() < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "discountValue must be non-negative");
-        }
-        if (request.getStartTime() == null || request.getEndTime() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "startTime and endTime are required");
-        }
-        if (!request.getEndTime().isAfter(request.getStartTime())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "endTime must be after startTime");
-        }
-    }
-
-    private void applyRequestToPromotion(Promotion promotion, PromotionRequestDTO request) {
-        promotion.setName(request.getName());
-        promotion.setType(request.getType());
-        promotion.setDiscountValue(request.getDiscountValue());
-        promotion.setStartTime(request.getStartTime());
-        promotion.setEndTime(request.getEndTime());
-    }
-
-    private PromotionResponseDTO toResponse(Promotion promotion) {
-        PromotionResponseDTO response = new PromotionResponseDTO();
-        response.setId(promotion.getId());
-        response.setName(promotion.getName());
-        response.setType(promotion.getType());
-        response.setDiscountValue(promotion.getDiscountValue());
-        response.setStartTime(promotion.getStartTime());
-        response.setEndTime(promotion.getEndTime());
-        response.setActive(promotion.isActive());
-        return response;
-    }
 }

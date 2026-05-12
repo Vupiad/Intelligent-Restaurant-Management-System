@@ -1,8 +1,8 @@
 package com.hcmut.irms.ordering_service.usecase.create;
 
-import com.hcmut.irms.ordering_service.dto.api.CreateOrderRequest;
-import com.hcmut.irms.ordering_service.dto.api.OrderResponse;
+import com.hcmut.irms.ordering_service.usecase.model.CreateOrderCommand;
+import com.hcmut.irms.ordering_service.usecase.model.OrderResult;
 
 public interface CreateOrderUseCase {
-    OrderResponse createOrder(CreateOrderRequest request, String bearerToken);
+    OrderResult createOrder(CreateOrderCommand command);
 }

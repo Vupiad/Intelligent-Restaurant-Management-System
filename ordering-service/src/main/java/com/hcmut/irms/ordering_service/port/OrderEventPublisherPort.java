@@ -4,7 +4,7 @@ import com.hcmut.irms.ordering_service.dto.event.OrderCreatedEvent;
 
 public interface OrderEventPublisherPort {
     /**
-     * Publishes an order-created event to the KDS via RabbitMQ.
+     * Publishes an order-created event.
      */
     void publishOrderCreated(OrderCreatedEvent event);
 }

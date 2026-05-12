@@ -1,5 +1,6 @@
 package com.hcmut.irms.ordering_service.adapter.messaging;
 
+import com.hcmut.irms.ordering_service.domain.OrderStatus;
 import com.hcmut.irms.ordering_service.dto.event.UpdateOrderStatusEvent;
 import com.hcmut.irms.ordering_service.usecase.update.UpdateOrderStatusUseCase;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,14 @@ public class KdsOrderStatusListener {
     public void onKdsStatusEvent(UpdateOrderStatusEvent event) {
         log.info("Received KDS status event: orderId={} newStatus={} updatedBy={}",
                 event.orderId(), event.newStatus(), event.updatedBy());
-        updateOrderStatusUseCase.updateStatus(event.orderId(), event.newStatus());
+        Long orderId;
+        try {
+            orderId = Long.parseLong(event.orderId());
+        } catch (NumberFormatException e) {
+            log.warn("Received invalid orderId from KDS: '{}' - ignoring event", event.orderId());
+            return;
+        }
+
+        updateOrderStatusUseCase.updateStatus(orderId, OrderStatus.fromString(event.newStatus()));
     }
 }

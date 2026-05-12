@@ -1,6 +1,6 @@
 package com.hcmut.irms.auth.config;
 
-import com.hcmut.irms.auth.service.JwtService;
+import com.hcmut.irms.auth.service.TokenProvider;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -19,10 +19,10 @@ import java.util.Collections;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtService jwtService;
+    private final TokenProvider tokenProvider;
 
-    public JwtAuthenticationFilter(JwtService jwtService) {
-        this.jwtService = jwtService;
+    public JwtAuthenticationFilter(TokenProvider tokenProvider) {
+        this.tokenProvider = tokenProvider;
     }
 
     @Override
@@ -55,8 +55,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String jwt = authHeader.substring(7);
 
         try {
-            String username = jwtService.extractUsername(jwt);
-            String role = jwtService.extractRole(jwt);
+            String username = tokenProvider.extractUsername(jwt);
+            String role = tokenProvider.extractRole(jwt);
             if (role == null || role.isBlank()) {
                 sendErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid token claims.");
                 return;
